@@ -196,20 +196,3 @@ body[data-theme="day"] .glass-card.lg-refract {
     backdrop-filter:var(--lg-filter,blur(12px)) blur(1px) saturate(180%) brightness(1.05) !important;
   }
 }
-
-
-/* Keep the Tech Stack cards on their own clean glass treatment. Do not apply
-   the global refractive/rim layers to inner skill elements. */
-.tech-stack-section .tech-card{border:1px solid rgba(255,255,255,.12)!important;overflow:visible!important}
-.tech-stack-section .tech-card::after{content:none!important;display:none!important}
-.tech-stack-section .tech-card .tech-logo,
-.tech-stack-section .tech-card .tech-card-name,
-.tech-stack-section .tech-card .tech-card-name>span,
-.tech-stack-section .tech-card .tech-proficiency,
-.tech-stack-section .tech-card .tech-proficiency>span,
-.tech-stack-section .tech-card .tech-proficiency>strong,
-.tech-stack-section .tech-card .tech-meter{border-radius:initial;box-shadow:none}
-.tech-stack-section .tech-card .tech-logo{border-radius:10px;background:rgba(255,255,255,.055);border:1px solid rgba(255,255,255,.10)}
-.tech-stack-section .tech-card .tech-card-name>span,
-.tech-stack-section .tech-card .tech-proficiency>span{background:none!important;padding:0!important}
-.tech-stack-section .tech-card .tech-meter{border-radius:999px!important;overflow:hidden!important;background:rgba(3,8,20,.72)!important}
