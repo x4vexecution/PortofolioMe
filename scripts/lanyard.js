@@ -36,12 +36,12 @@ const CONFIG = {
 
   /* Strap ribbon */
   strap: {
-    width: 0.66,            // 0.22 * card width
-    thickness: 0.03,        // real thickness, rounded bevel edges
-    samples: 96,            // high-resolution ribbon surface for smooth bending and twist
-    tileWidths: 4,          // texture tile length = tileWidths * width
-    roughness: 0.75,
-    text: 'LUMINICA â€¢ ANDROID SYSTEMS â€¢ LX â€¢',
+    width: 0.60,            // one continuous premium ribbon
+    thickness: 0.042,       // softly beveled woven ribbon
+    samples: 128,           // denser ribbon mesh for smooth premium edges
+    tileWidths: 4,          // seamless repeating LUMINICA textile tile
+    roughness: 0.52,
+    text: 'LUMINICA  •  LUMINICA  •',
   },
 
   /* Physics. Units are local; gravity is tuned for the badge feel. */
@@ -93,14 +93,14 @@ const CONFIG = {
 
   /* Palette: graphite / silver */
   colors: {
-    strapBase: '#3a3d42',
-    strapHighlight: '#8b9099',
-    strapStitch: '#c9ccd1',
-    strapBorder: '#202226',
-    metal: 0xb8bcc4,
-    cardEdge: 0x1c1e22,
+    strapBase: '#111923',
+    strapHighlight: '#d8bd83',
+    strapStitch: '#e3cb98',
+    strapBorder: '#070b10',
+    metal: 0xd2b477,
+    cardEdge: 0x171b22,
     key: 0xffffff,
-    rim: 0x6f8dff,
+    rim: 0xd9bd83,
     ambient: 0xffffff,
   },
 
@@ -298,8 +298,8 @@ export async function createLanyard(container) {
   const metalMat = new THREE.MeshStandardMaterial({
     color: CONFIG.colors.metal,
     metalness: 0.9,
-    roughness: 0.25,
-    envMapIntensity: 1.3,
+    roughness: 0.19,
+    envMapIntensity: 1.65,
   });
 
   // Grommet rim around the badge slot (does not flip with the card).
@@ -314,15 +314,13 @@ export async function createLanyard(container) {
   grommetGeo.translate(0, slotY, -(T + 0.03) / 2);
   cardGroup.add(new THREE.Mesh(grommetGeo, metalMat));
 
-  // Split ring through the slot: two slightly offset tori.
-  const ringGeo = new THREE.TorusGeometry(0.115, 0.02, 8, 24);
-  const ringA = new THREE.Mesh(ringGeo, metalMat);
-  ringA.position.set(0, slotY, RING_Z);
-  ringA.rotation.x = 0.18;
-  const ringB = new THREE.Mesh(ringGeo, metalMat);
-  ringB.position.set(0, slotY, -RING_Z);
-  ringB.rotation.x = -0.18;
-  cardGroup.add(ringA, ringB);
+  // Single polished champagne-gold ring: one clean attachment point.
+  const ringGeo = new THREE.TorusGeometry(0.125, 0.026, 12, 36);
+  const badgeRing = new THREE.Mesh(ringGeo, metalMat);
+  badgeRing.position.set(0, slotY, RING_Z);
+  badgeRing.rotation.x = 0.12;
+  badgeRing.castShadow = true;
+  cardGroup.add(badgeRing);
 
   // Crimp ferrule at the strap end (rides on the last rope body).
   const crimpGroup = new THREE.Group();
@@ -395,7 +393,7 @@ export async function createLanyard(container) {
   const strapMat = new THREE.MeshStandardMaterial({
     map: strapMap,
     normalMap: strapNormal,
-    normalScale: new THREE.Vector2(0.45, 0.45),
+    normalScale: new THREE.Vector2(0.62, 0.62),
     roughness: STRAP.roughness,
     metalness: 0,
     side: THREE.DoubleSide,
@@ -1063,7 +1061,7 @@ export async function createLanyard(container) {
  * ------------------------------------------------------------------------- */
 // Grey woven ribbon with printed text, edge stripes and stitching.
 function makeStrapTextures(maxAniso) {
-  const h = 256;
+  const h = 512;
   const w = h * CONFIG.strap.tileWidths;
   const tileLength = CONFIG.strap.width * CONFIG.strap.tileWidths;
 
@@ -1072,80 +1070,97 @@ function makeStrapTextures(maxAniso) {
   map.height = h;
   const g = map.getContext('2d');
 
-  g.fillStyle = CONFIG.colors.strapBase;
+  // Deep midnight textile with a subtle satin centre highlight.
+  const base = g.createLinearGradient(0, 0, 0, h);
+  base.addColorStop(0, '#080e16');
+  base.addColorStop(0.18, '#172331');
+  base.addColorStop(0.5, '#202c39');
+  base.addColorStop(0.82, '#121c28');
+  base.addColorStop(1, '#070c13');
+  g.fillStyle = base;
   g.fillRect(0, 0, w, h);
 
-  // woven herringbone: crossing diagonal ridges + weft
-  for (let x = -h; x < w + h; x += 7) {
-    g.strokeStyle = 'rgba(139,144,153,0.10)';
+  // Fine diagonal herringbone weave, with a second low-contrast crossing pass.
+  for (let x = -h; x < w + h; x += 8) {
+    g.strokeStyle = 'rgba(220,205,174,0.075)';
     g.lineWidth = 2;
     g.beginPath();
     g.moveTo(x, 0);
     g.lineTo(x + h, h);
     g.stroke();
-    g.strokeStyle = 'rgba(16,18,22,0.16)';
+    g.strokeStyle = 'rgba(0,0,0,0.24)';
     g.beginPath();
-    g.moveTo(x + 3, 0);
-    g.lineTo(x + 3 - h, h);
+    g.moveTo(x + 4, 0);
+    g.lineTo(x + 4 - h, h);
     g.stroke();
   }
-  for (let y = 0; y < h; y += 4) {
-    g.fillStyle = 'rgba(255,255,255,0.025)';
+  for (let y = 0; y < h; y += 3) {
+    g.fillStyle = y % 6 === 0 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
     g.fillRect(0, y, w, 1);
   }
 
-  // darker border stripe on both edges
-  const border = Math.round(h * 0.055);
-  g.fillStyle = CONFIG.colors.strapBorder;
+  // Dark bound edges and two champagne-gold piping lines.
+  const border = Math.round(h * 0.065);
+  g.fillStyle = '#050a10';
   g.fillRect(0, 0, w, border);
   g.fillRect(0, h - border, w, border);
+  const edgeY = [border + 12, h - border - 12];
+  edgeY.forEach((y) => {
+    const line = g.createLinearGradient(0, y - 2, 0, y + 2);
+    line.addColorStop(0, 'rgba(115,83,39,0.45)');
+    line.addColorStop(0.5, 'rgba(232,207,151,0.95)');
+    line.addColorStop(1, 'rgba(115,83,39,0.45)');
+    g.strokeStyle = line;
+    g.lineWidth = 3;
+    g.beginPath();
+    g.moveTo(0, y);
+    g.lineTo(w, y);
+    g.stroke();
+  });
 
-  // stitched line 3px inside each edge
-  g.setLineDash([h * 0.05, h * 0.04]);
-  g.strokeStyle = CONFIG.colors.strapStitch;
-  g.globalAlpha = 0.55;
-  g.lineWidth = 3;
-  for (const y of [border * 1.9, h - border * 1.9]) {
+  // Small, evenly spaced saddle stitches close to both edges.
+  g.setLineDash([11, 9]);
+  g.strokeStyle = 'rgba(231,210,166,0.82)';
+  g.lineWidth = 2;
+  for (const y of [border * 1.85, h - border * 1.85]) {
     g.beginPath();
     g.moveTo(0, y);
     g.lineTo(w, y);
     g.stroke();
   }
   g.setLineDash([]);
-  g.globalAlpha = 1;
 
-  // printed text, running along the strap
+  // Repeating LUMINICA wordmark, stamped in a restrained warm-metal ink.
   g.save();
   g.translate(w / 2, h / 2);
   g.textAlign = 'center';
   g.textBaseline = 'middle';
-  let size = Math.round(h * 0.4);
-  const family = '"Arial Narrow", "Helvetica Neue", Arial, sans-serif';
-  g.font = `700 ${size}px ${family}`;
-  const textW = g.measureText(CONFIG.strap.text).width;
-  if (textW > w * 0.9) {
-    size = Math.round(size * ((w * 0.9) / textW));
-    g.font = `700 ${size}px ${family}`;
-  }
-  g.fillStyle = CONFIG.colors.strapHighlight;
-  g.fillText(CONFIG.strap.text, 0, 0);
+  g.shadowColor = 'rgba(0,0,0,0.65)';
+  g.shadowBlur = 7;
+  g.font = '700 104px "Manrope", "Arial", sans-serif';
+  g.fillStyle = '#e0c58d';
+  g.fillText('LUMINICA', 0, -2);
+  g.shadowBlur = 0;
+  g.font = '500 23px "DM Mono", monospace';
+  g.fillStyle = 'rgba(239,222,185,0.72)';
+  g.fillText('DE XAVIERA  ·  LX', 0, 92);
   g.restore();
 
-  // matching normal map: two crossing ridge directions
+  // Matching micro-relief normal map for the woven fibres.
   const nrm = document.createElement('canvas');
   nrm.width = w;
   nrm.height = h;
   const ng = nrm.getContext('2d');
   ng.fillStyle = '#8080ff';
   ng.fillRect(0, 0, w, h);
-  for (let x = -h; x < w + h; x += 7) {
-    ng.strokeStyle = 'rgba(255,140,255,0.35)';
+  for (let x = -h; x < w + h; x += 8) {
+    ng.strokeStyle = 'rgba(255,140,255,0.30)';
     ng.lineWidth = 2;
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x + h, h);
     ng.stroke();
-    ng.strokeStyle = 'rgba(0,140,255,0.35)';
+    ng.strokeStyle = 'rgba(0,140,255,0.30)';
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x - h, h);
