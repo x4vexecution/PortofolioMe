@@ -1,5 +1,5 @@
 /**
- * Realistic elastic hanging lanyard ID badge for the portfolio hero.
+ * Realistic hanging lanyard ID badge for LUMINICA.
  *
  * Mount:   <div id="lanyard" class="hero-lanyard" aria-hidden="true"></div>
  * Script:  <script type="module" src="/scripts/lanyard.js"></script>
@@ -7,10 +7,6 @@
  *
  * Exposes window.lanyard = { destroy } once mounted, and exports createLanyard()
  * so a bundler/framework can mount it manually.
- *
- * Everything below runs in a "local" unit space where the card is `card.width`
- * wide. A single root group is scaled on resize so the badge keeps the right
- * size on any screen, and the physics never has to be rebuilt.
  */
 
 import * as THREE from 'three';
@@ -18,49 +14,49 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* ------------------------------------------------------------------------- *
- * Config â€” every tunable lives here
+ * Config
  * ------------------------------------------------------------------------- */
 const CONFIG = {
-  /* Card, in local units. Portrait 1:1.4. */
+  /* Card, in local units. Portrait ID badge. */
   card: {
-    width: 3,
-    height: 4.2,            // 1.4 * width
-    thickness: 0.105,       // 0.035 * width
-    cornerRadius: 0.18,     // 0.06 * width
-    slotWidth: 0.72,        // badge slot, top centre
-    slotHeight: 0.2,
-    slotInset: 0.42,        // slot centre distance from the card top edge
-    clearcoat: 0.6,
-    roughness: 0.35,
+    width: 3.1,
+    height: 4.55,
+    thickness: 0.11,
+    cornerRadius: 0.2,
+    slotWidth: 0.78,
+    slotHeight: 0.22,
+    slotInset: 0.44,
+    clearcoat: 0.55,
+    roughness: 0.34,
   },
 
-  /* Strap ribbon */
+  /* Single continuous woven strap */
   strap: {
-    width: 0.60,            // one continuous premium ribbon
-    thickness: 0.042,       // softly beveled woven ribbon
-    samples: 128,           // denser ribbon mesh for smooth premium edges
-    tileWidths: 4,          // seamless repeating LUMINICA textile tile
-    roughness: 0.52,
-    text: 'LUMINICA  •  LUMINICA  •',
+    width: 0.54,
+    thickness: 0.044,
+    samples: 128,
+    tileLength: 3.2,
+    roughness: 0.58,
+    label: 'LUMINICA',
   },
 
-  /* Physics. Units are local; gravity is tuned for the badge feel. */
+  /* Physics */
   physics: {
-    gravity: -40,
-    linearDamping: 0.85,     // softer damping: elastic recoil and longer natural swing
-    angularDamping: 1.8,
-    ropeSegments: 10,       // ten articulated links for smoother elastic motion
-    ropeSegmentLength: 0.315,
-    claspLength: 0.50,      // second joint: crimp -> clasp -> card slot
-    ropeDensity: 40,
-    claspDensity: 20,
-    cardDensity: 0.25,
+    gravity: -42,
+    linearDamping: 0.9,
+    angularDamping: 2.1,
+    ropeSegments: 10,
+    ropeSegmentLength: 0.34,
+    claspLength: 0.46,
+    ropeDensity: 36,
+    claspDensity: 18,
+    cardDensity: 0.24,
     solverIterations: 18,
-    maxPhysicsSteps: 5,     // per frame; mobile capped at 2
+    maxPhysicsSteps: 5,
     maxStepsMobile: 2,
     fixedStep: 1 / 60,
-    swaySpeed: 0.9,         // idle sway frequency
-    swayImpulse: 0.004,     // idle sway strength (tiny)
+    swaySpeed: 0.85,
+    swayImpulse: 0.0032,
   },
 
   /* Camera + renderer */
@@ -70,41 +66,41 @@ const CONFIG = {
     maxPixelRatio: 2,
   },
 
-  /* Responsive layout */
+  /* Responsive layout matching the reference framing */
   layout: {
     mobileMaxWidth: 767,
-    mobileCardWidth: 0.60,  // larger, more prominent badge on phones
-    mobileRight: 0.70,      // keep the badge toward the right, like a hanging hero prop
-    desktopCardWidth: 0.25, // card width / canvas width on desktop
-    desktopRight: 0.72,     // card centre as a fraction of canvas width
-    verticalBias: -0.25,    // card centre target, fraction of visible height
-    anchorMargin: 0.4,      // world units the anchor stays above the top edge
-    fit: 0.94,              // max fraction of the visible height the chain uses
+    mobileCardWidth: 0.56,
+    mobileRight: 0.68,
+    desktopCardWidth: 0.24,
+    desktopRight: 0.72,
+    verticalBias: -0.22,
+    anchorMargin: 0.6,
+    fit: 0.92,
   },
 
   /* Interaction */
   interaction: {
-    dragThresholdMouse: 6,  // px before a press becomes a drag
+    dragThresholdMouse: 6,
     dragThresholdTouch: 10,
-    clickMaxMs: 300,        // press shorter than this + no drag = click/flip
-    flipDuration: 600,      // ms, easeInOutCubic
-    maxReleaseSpeed: 18,
+    clickMaxMs: 320,
+    flipDuration: 580,
+    maxReleaseSpeed: 17,
   },
 
-  /* Palette: graphite / silver */
+  /* Palette: matte obsidian / brushed silver-titanium */
   colors: {
-    strapBase: '#111923',
-    strapHighlight: '#d8bd83',
-    strapStitch: '#e3cb98',
-    strapBorder: '#070b10',
-    metal: 0xd2b477,
-    cardEdge: 0x171b22,
+    strapBase: '#0b0d10',
+    strapEdge: '#050608',
+    strapStitch: '#9aa2ad',
+    strapText: '#f2f5f8',
+    metal: 0xc9cfd6,
+    cardEdge: 0x15181e,
     key: 0xffffff,
-    rim: 0xd9bd83,
+    rim: 0x9ab4d6,
     ambient: 0xffffff,
   },
 
-  /* Your card art. Missing files fall back to a labelled grey face. */
+  /* Original front & back images — preserved verbatim */
   assets: {
     front: 'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1bc02a650c14a95053c88a9166a1eb97.jpg',
     back: 'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1ad905ac00ce4dde1a796b5dcbc6060b.jpg',
@@ -122,13 +118,13 @@ export async function createLanyard(container) {
   const H = CARD.height;
   const T = CARD.thickness;
   const slotY = H / 2 - CARD.slotInset;
-  const FACE_Z = T / 2 + 0.016; // clears the extruded bevel
-  const RING_Z = T / 2 + 0.045; // split ring lies on the badge face
-  const CLASP_Z = T / 2 + 0.04; // clasp rests on the front, not inside the card
+  const FACE_Z = T / 2 + 0.016;
+  const RING_Z = T / 2 + 0.048;
+  const CLASP_Z = T / 2 + 0.042;
 
   const ropeLen = PHYS.ropeSegments * PHYS.ropeSegmentLength;
   const claspLen = PHYS.claspLength;
-  const anchorToCard = ropeLen + claspLen + slotY; // anchor y -> card centre y
+  const anchorToCard = ropeLen + claspLen + slotY;
 
   /* ---- renderer ---------------------------------------------------------- */
   const renderer = new THREE.WebGLRenderer({
@@ -138,7 +134,7 @@ export async function createLanyard(container) {
   });
   renderer.setClearAlpha(0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.05;
+  renderer.toneMappingExposure = 1.04;
   const canvas = renderer.domElement;
   container.appendChild(canvas);
   const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
@@ -154,13 +150,13 @@ export async function createLanyard(container) {
   const envRT = pmrem.fromScene(room, 0.04);
   room.dispose();
   scene.environment = envRT.texture;
-  scene.environmentIntensity = 0.9;
+  scene.environmentIntensity = 0.95;
 
-  scene.add(new THREE.AmbientLight(CONFIG.colors.ambient, 0.5));
-  const key = new THREE.DirectionalLight(CONFIG.colors.key, 2.4);
+  scene.add(new THREE.AmbientLight(CONFIG.colors.ambient, 0.55));
+  const key = new THREE.DirectionalLight(CONFIG.colors.key, 2.3);
   key.position.set(5, 9, 10);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(CONFIG.colors.rim, 1.7);
+  const rim = new THREE.DirectionalLight(CONFIG.colors.rim, 1.5);
   rim.position.set(-7, -3, -8);
   scene.add(rim);
 
@@ -168,10 +164,7 @@ export async function createLanyard(container) {
   const root = new THREE.Group();
   scene.add(root);
 
-  // Visual-only entrance: the entire assembly drops together, so the existing
-  // Rapier constraints and all interaction state remain untouched.
   const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  const introOffset = reduceMotion ? 0 : 0; // assigned after the first layout is known
   let introStart = 0;
   let introPlayed = false;
   let introDistance = 0;
@@ -186,7 +179,6 @@ export async function createLanyard(container) {
 
     const target = mobile ? LAY.mobileCardWidth : LAY.desktopCardWidth;
     let scale = (target * visibleW) / W;
-    // Never let the chain (rope + clasp + card) be taller than the canvas.
     scale = Math.min(scale, (LAY.fit * visibleH) / (ropeLen + claspLen + H));
 
     const camX = (0.5 - (mobile ? LAY.mobileRight : LAY.desktopRight)) * visibleW;
@@ -199,7 +191,7 @@ export async function createLanyard(container) {
   };
 
   let view = computeLayout();
-  introDistance = reduceMotion ? 0 : (view.visibleH / view.scale) * 0.72;
+  introDistance = reduceMotion ? 0 : (view.visibleH / view.scale) * 0.65;
   root.scale.setScalar(view.scale);
   camera.aspect = view.aspect;
   camera.updateProjectionMatrix();
@@ -215,10 +207,9 @@ export async function createLanyard(container) {
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = maxAniso;
-          // Cover the portrait card without distorting the source image.
-          // Crop only the excess dimension and keep the image centered.
           const image = tex.image;
-          const imageAspect = (image?.naturalWidth || image?.width || 1) /
+          const imageAspect =
+            (image?.naturalWidth || image?.width || 1) /
             (image?.naturalHeight || image?.height || 1);
           const cardAspect = W / H;
           tex.wrapS = THREE.ClampToEdgeWrapping;
@@ -234,7 +225,7 @@ export async function createLanyard(container) {
           resolve(tex);
         },
         undefined,
-        () => resolve(null), // missing file -> labelled fallback face
+        () => resolve(null),
       );
     });
 
@@ -252,15 +243,15 @@ export async function createLanyard(container) {
   cardGroup.position.set(0, 0, 0);
   root.add(cardGroup);
 
-  const flipGroup = new THREE.Group(); // visual flip only, physics untouched
+  const flipGroup = new THREE.Group();
   cardGroup.add(flipGroup);
 
   const edgeMat = new THREE.MeshPhysicalMaterial({
     color: CONFIG.colors.cardEdge,
     roughness: CARD.roughness,
-    metalness: 0.05,
+    metalness: 0.08,
     clearcoat: CARD.clearcoat,
-    clearcoatRoughness: 0.2,
+    clearcoatRoughness: 0.22,
   });
   const faceMat = (map) =>
     new THREE.MeshPhysicalMaterial({
@@ -269,21 +260,24 @@ export async function createLanyard(container) {
       roughness: CARD.roughness,
       metalness: 0.02,
       clearcoat: CARD.clearcoat,
-      clearcoatRoughness: 0.25,
+      clearcoatRoughness: 0.24,
     });
 
   const coreGeo = new THREE.ExtrudeGeometry(roundedShape(W, H, CARD.cornerRadius, slotY, CARD), {
     depth: T,
     bevelEnabled: true,
-    bevelThickness: 0.012,
-    bevelSize: 0.012,
+    bevelThickness: 0.014,
+    bevelSize: 0.014,
     bevelSegments: 2,
     curveSegments: 10,
     steps: 1,
   });
   coreGeo.translate(0, 0, -T / 2);
 
-  const faceGeo = new THREE.ShapeGeometry(roundedShape(W - 0.1, H - 0.1, CARD.cornerRadius - 0.03, slotY, CARD), 10);
+  const faceGeo = new THREE.ShapeGeometry(
+    roundedShape(W - 0.1, H - 0.1, CARD.cornerRadius - 0.03, slotY, CARD),
+    10,
+  );
   normalizeShapeUV(faceGeo, W - 0.1, H - 0.1);
 
   const coreMesh = new THREE.Mesh(coreGeo, edgeMat);
@@ -291,18 +285,18 @@ export async function createLanyard(container) {
   frontMesh.position.z = FACE_Z;
   const backMesh = new THREE.Mesh(faceGeo, faceMat(backMap));
   backMesh.position.z = -FACE_Z;
-  backMesh.rotation.y = Math.PI; // face outward; UVs then read correctly
+  backMesh.rotation.y = Math.PI;
   flipGroup.add(coreMesh, frontMesh, backMesh);
 
-  /* ---- hardware ---------------------------------------------------------- */
+  /* ---- hardware (matte silver-titanium collar + ring + swivel clip) ------ */
   const metalMat = new THREE.MeshStandardMaterial({
     color: CONFIG.colors.metal,
-    metalness: 0.9,
-    roughness: 0.19,
-    envMapIntensity: 1.65,
+    metalness: 0.86,
+    roughness: 0.28,
+    envMapIntensity: 1.45,
   });
 
-  // Grommet rim around the badge slot (does not flip with the card).
+  // Slot reinforcement rim
   const grommetShape = roundedShape(CARD.slotWidth + 0.1, CARD.slotHeight + 0.1, 0.08, 0, CARD);
   grommetShape.holes.length = 0;
   grommetShape.holes.push(roundedPath(new THREE.Path(), 0, 0, CARD.slotWidth, CARD.slotHeight, 0.08));
@@ -314,37 +308,30 @@ export async function createLanyard(container) {
   grommetGeo.translate(0, slotY, -(T + 0.03) / 2);
   cardGroup.add(new THREE.Mesh(grommetGeo, metalMat));
 
-  // Single polished champagne-gold ring: one clean attachment point.
-  const ringGeo = new THREE.TorusGeometry(0.125, 0.026, 12, 36);
+  // Split ring attached to badge slot
+  const ringGeo = new THREE.TorusGeometry(0.13, 0.028, 12, 36);
   const badgeRing = new THREE.Mesh(ringGeo, metalMat);
   badgeRing.position.set(0, slotY, RING_Z);
-  badgeRing.rotation.x = 0.12;
-  badgeRing.castShadow = true;
+  badgeRing.rotation.x = 0.1;
   cardGroup.add(badgeRing);
 
-  // Crimp ferrule at the strap end (rides on the last rope body).
+  // Clean rectangular metal crimp collar at the strap end (matches reference style)
   const crimpGroup = new THREE.Group();
   const crimpShape = new THREE.Shape();
-  roundedPath(crimpShape, 0, 0, 0.74, 0.42, 0.08);
+  roundedPath(crimpShape, 0, 0, 0.68, 0.36, 0.06);
   const crimpGeo = new THREE.ExtrudeGeometry(crimpShape, {
-    depth: 0.16,
+    depth: 0.18,
     bevelEnabled: true,
     bevelThickness: 0.02,
     bevelSize: 0.02,
     bevelSegments: 2,
     curveSegments: 8,
   });
-  crimpGeo.translate(0, 0, -0.08);
+  crimpGeo.translate(0, 0, -0.09);
   crimpGroup.add(new THREE.Mesh(crimpGeo, metalMat));
-  const rivetGeo = new THREE.CylinderGeometry(0.03, 0.03, 0.035, 10).rotateX(Math.PI / 2);
-  for (const y of [0.1, -0.1]) {
-    const rivet = new THREE.Mesh(rivetGeo, metalMat);
-    rivet.position.set(0, y, 0.095);
-    crimpGroup.add(rivet);
-  }
   root.add(crimpGroup);
 
-  // Swivel lobster-claw clasp, built along +Y from the split ring to the crimp.
+  // Swivel clasp connecting crimp to ring
   const claspGroup = new THREE.Group();
   const eye = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.022, 8, 20), metalMat);
   eye.position.y = -claspLen / 2 + 0.07;
@@ -352,23 +339,29 @@ export async function createLanyard(container) {
   topRing.position.y = claspLen / 2 - 0.03;
   const shankCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, -claspLen / 2 + 0.13, 0),
-    new THREE.Vector3(0, -0.1, 0.015),
-    new THREE.Vector3(0, 0.1, 0.02),
+    new THREE.Vector3(0, -0.08, 0.015),
+    new THREE.Vector3(0, 0.08, 0.02),
     new THREE.Vector3(0, claspLen / 2 - 0.05, 0),
   ]);
   const shank = new THREE.Mesh(new THREE.TubeGeometry(shankCurve, 20, 0.026, 8, false), metalMat);
-  const gate = new THREE.Mesh(new THREE.TubeGeometry(
-    new THREE.CatmullRomCurve3([
-      new THREE.Vector3(0.02, -claspLen / 2 + 0.12, 0.03),
-      new THREE.Vector3(0.075, -claspLen / 2 + 0.07, 0.02),
-      new THREE.Vector3(0.05, -claspLen / 2 + 0.02, 0),
-    ]),
-    8, 0.014, 6, false,
-  ), metalMat);
+  const gate = new THREE.Mesh(
+    new THREE.TubeGeometry(
+      new THREE.CatmullRomCurve3([
+        new THREE.Vector3(0.02, -claspLen / 2 + 0.12, 0.03),
+        new THREE.Vector3(0.075, -claspLen / 2 + 0.07, 0.02),
+        new THREE.Vector3(0.05, -claspLen / 2 + 0.02, 0),
+      ]),
+      8,
+      0.014,
+      6,
+      false,
+    ),
+    metalMat,
+  );
   claspGroup.add(eye, topRing, shank, gate);
   root.add(claspGroup);
 
-  /* ---- strap ribbon (thick, parallel-transport frames) -------------------- */
+  /* ---- strap ribbon (single continuous strand) ---------------------------- */
   const SAMPLES = STRAP.samples;
   const RIBBON_VERTS = SAMPLES * 6;
   const posArr = new Float32Array(RIBBON_VERTS * 3);
@@ -393,9 +386,9 @@ export async function createLanyard(container) {
   const strapMat = new THREE.MeshStandardMaterial({
     map: strapMap,
     normalMap: strapNormal,
-    normalScale: new THREE.Vector2(0.62, 0.62),
+    normalScale: new THREE.Vector2(0.55, 0.55),
     roughness: STRAP.roughness,
-    metalness: 0,
+    metalness: 0.02,
     side: THREE.DoubleSide,
   });
   const strapMesh = new THREE.Mesh(strapGeo, strapMat);
@@ -445,10 +438,8 @@ export async function createLanyard(container) {
       .setTranslation(0, anchorLocal - ropeLen - claspLen / 2, 0)
       .setLinearDamping(PHYS.linearDamping)
       .setAngularDamping(PHYS.angularDamping)
-      // the clasp only swivels in the swing plane, like a real one
       .enabledRotations(false, false, true),
   );
-  // Sensor collider: keeps the clasp's mass without it fighting the card it hangs over.
   world.createCollider(
     RAPIER.ColliderDesc.ball(0.045).setDensity(PHYS.claspDensity).setSensor(true),
     claspBody,
@@ -461,7 +452,6 @@ export async function createLanyard(container) {
       .setTranslation(0, anchorLocal - anchorToCard, 0)
       .setLinearDamping(PHYS.linearDamping)
       .setAngularDamping(PHYS.angularDamping)
-      // only in-plane swing; the card always faces front, the flip is visual
       .enabledRotations(false, false, true),
   );
   world.createCollider(
@@ -469,41 +459,6 @@ export async function createLanyard(container) {
     cardBody,
   );
   spherical(claspBody, cardBody, { x: 0, y: -claspLen / 2, z: 0 }, { x: 0, y: slotY, z: 0 });
-
-  /* ---- invisible walls at the frustum edges ------------------------------ */
-  const makeWall = (hx, hy, hz) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-    world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz), body);
-    return body;
-  };
-  const wallLeft = makeWall(0.1, 500, 500);
-  const wallRight = makeWall(0.1, 500, 500);
-  const wallBottom = makeWall(500, 0.1, 500);
-
-  const dragBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: -3, maxZ: 3 };
-
-  const updateWalls = () => {
-    const s = view.scale;
-    // Walls are safety limits only; keep them far outside the visible stage.
-    const left = -100;
-    const right = 100;
-    const bottom = -100;
-    wallLeft.setTranslation({ x: left, y: 0, z: 0 }, true);
-    wallRight.setTranslation({ x: right, y: 0, z: 0 }, true);
-    wallBottom.setTranslation({ x: 0, y: bottom, z: 0 }, true);
-
-    const rx = (W / 2) * 1.02;
-    const ry = (H / 2) * 1.02;
-    dragBounds.minX = -80;
-    dragBounds.maxX = 80;
-    dragBounds.minY = -80;
-    dragBounds.maxY = 80;
-    if (dragBounds.minX > dragBounds.maxX) {
-      const mid = (dragBounds.minX + dragBounds.maxX) / 2;
-      dragBounds.minX = dragBounds.maxX = mid;
-    }
-  };
-  updateWalls();
 
   /* ---- simulation state -------------------------------------------------- */
   const cardPos = new THREE.Vector3();
@@ -539,7 +494,7 @@ export async function createLanyard(container) {
   prevClaspQuat.copy(claspQuat);
   ropePos.forEach((p, i) => prevRope[i].copy(p));
 
-  /* ---- strap update ------------------------------------------------------ */
+  /* ---- strap geometry update --------------------------------------------- */
   const curvePoints = [
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -557,7 +512,6 @@ export async function createLanyard(container) {
   const UP_AXIS = new THREE.Vector3(0, 1, 0);
   const strapEndDir = new THREE.Vector3();
 
-  // flattened hexagon cross-section, counter-clockwise so faces point outward
   const hw = STRAP.width / 2;
   const ht = STRAP.thickness / 2;
   const e = ht;
@@ -569,11 +523,13 @@ export async function createLanyard(container) {
     [hw - e, ht],
     [-hw + e, ht],
   ];
-  const V = [0, 0.06, 0.94, 1, 0.94, 0.06];
+  const V = [0, 0.05, 0.95, 1, 0.95, 0.05];
 
   let strapTwist = 0;
+  let strapStretch = 0;
+
   const updateStrap = (alpha) => {
-    curvePoints[0].set(0, anchorLocal + 1.6, 0);
+    curvePoints[0].set(0, anchorLocal + 2.2, 0);
     curvePoints[1].set(0, anchorLocal, 0);
     for (let i = 0; i < ropeBodies.length; i++) {
       curvePoints[i + 2].lerpVectors(prevRope[i], ropePos[i], alpha);
@@ -586,34 +542,30 @@ export async function createLanyard(container) {
       curve.getTangent(t, tmpTan);
 
       if (i === 0) {
-        // seed the frame facing the camera, perpendicular to the tangent
         tmpNrm.set(0, 0, 1).addScaledVector(tmpTan, -tmpTan.z);
         if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(1, 0, 0);
         tmpNrm.normalize();
       } else {
-        // parallel transport: rotate the previous frame by the tangent delta
         frameQ.setFromUnitVectors(prevTan, tmpTan);
         tmpNrm.applyQuaternion(frameQ);
         tmpNrm.addScaledVector(tmpTan, -tmpNrm.dot(tmpTan));
         if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(0, 0, 1);
         tmpNrm.normalize();
       }
-      // Apply finger-driven torsion progressively along the ribbon. The upper
-      // end follows the hand first; the twist fades toward the badge naturally.
       if (Math.abs(strapTwist) > 1e-5) {
         tmpNrm.applyAxisAngle(tmpTan, strapTwist * t);
       }
-      // right-handed frame (side, normal, tangent) keeps the face winding outward
       tmpSide.crossVectors(tmpNrm, tmpTan).normalize();
       prevTan.copy(tmpTan);
 
       if (i > 0) length += tmpPoint.distanceTo(tmpPrev);
       tmpPrev.copy(tmpPoint);
 
+      // Map U along length so text reads cleanly along the vertical strap
       const u = length / tileLength;
       for (let j = 0; j < 6; j++) {
         const o = (i * 6 + j) * 3;
-        const x = XS[j][0] * (1 + strapStretch * 0.18);
+        const x = XS[j][0] * (1 + strapStretch * 0.14);
         const y = XS[j][1];
         posArr[o] = tmpPoint.x + tmpSide.x * x + tmpNrm.x * y;
         posArr[o + 1] = tmpPoint.y + tmpSide.y * x + tmpNrm.y * y;
@@ -657,17 +609,15 @@ export async function createLanyard(container) {
   let lastTime = 0;
   let accumulator = 0;
   let simTime = 0;
-
-  let dragging = false; // declared before stepPhysics reads it
+  let dragging = false;
 
   const stepPhysics = () => {
     simTime += PHYS.fixedStep;
     if (!dragging) {
-      strapTwist *= 0.9975;
-      // tiny idle sway; no auto rotation, the card always faces front
-      const sway = Math.sin(simTime * PHYS.swaySpeed) * 0.9 + Math.sin(simTime * 1.7 + 1.3) * 0.4;
+      strapTwist *= 0.996;
+      const sway = Math.sin(simTime * PHYS.swaySpeed) * 0.7 + Math.sin(simTime * 1.5 + 0.8) * 0.3;
       cardBody.applyImpulse({ x: sway * PHYS.swayImpulse, y: 0, z: 0 }, true);
-      cardBody.applyTorqueImpulse({ x: 0, y: 0, z: Math.sin(simTime * 0.6) * 0.0015 }, true);
+      cardBody.applyTorqueImpulse({ x: 0, y: 0, z: Math.sin(simTime * 0.55) * 0.0012 }, true);
     }
     prevCardPos.copy(cardPos);
     prevCardQuat.copy(cardQuat);
@@ -683,7 +633,7 @@ export async function createLanyard(container) {
     cardGroup.quaternion.slerpQuaternions(prevCardQuat, cardQuat, alpha);
 
     claspGroup.position.lerpVectors(prevClaspPos, claspPos, alpha);
-    claspGroup.position.z += CLASP_Z; // lies against the badge front
+    claspGroup.position.z += CLASP_Z;
     claspGroup.quaternion.slerpQuaternions(prevClaspQuat, claspQuat, alpha);
 
     if (flip.active) {
@@ -694,18 +644,16 @@ export async function createLanyard(container) {
 
     updateStrap(alpha);
 
-    // crimp follows the strap end, sitting just above the card's top edge
     strapEndDir.copy(endTangent).negate();
-    crimpGroup.position.copy(curvePoints[curvePoints.length - 1]).addScaledVector(strapEndDir, 0.07);
+    crimpGroup.position.copy(curvePoints[curvePoints.length - 1]).addScaledVector(strapEndDir, 0.06);
     crimpGroup.quaternion.setFromUnitVectors(UP_AXIS, strapEndDir);
 
     if (introPlayed && introStart > 0 && introDistance > 0) {
       const elapsed = (now - introStart) / 1000;
-      const duration = 1.65;
+      const duration = 1.45;
       if (elapsed < duration) {
         const t = elapsed / duration;
-        // Damped spring: quick drop, small overshoot, then a soft settle.
-        root.position.y = introDistance * Math.exp(-5.2 * t) * Math.cos(8.2 * t);
+        root.position.y = introDistance * Math.exp(-5.6 * t) * Math.cos(7.8 * t);
       } else {
         root.position.y = 0;
         introStart = 0;
@@ -727,7 +675,7 @@ export async function createLanyard(container) {
       accumulator -= PHYS.fixedStep;
       steps++;
     }
-    if (steps === maxSteps) accumulator = 0; // drop the backlog
+    if (steps === maxSteps) accumulator = 0;
     render(accumulator / PHYS.fixedStep, now);
   };
 
@@ -745,6 +693,7 @@ export async function createLanyard(container) {
     }
     rafId = requestAnimationFrame(tick);
   };
+
   const stop = () => {
     if (!running) return;
     running = false;
@@ -767,7 +716,6 @@ export async function createLanyard(container) {
     view = next;
     anchorLocal = next.anchorY / next.scale;
 
-    // Keep the chain together and put the card back where the layout wants it.
     const desiredCardY = anchorLocal - anchorToCard;
     const shift = desiredCardY - cardBody.translation().y;
     if (Math.abs(shift) > 1e-4 || Math.abs(anchorLocal - prevAnchorLocal) > 1e-4) {
@@ -777,7 +725,6 @@ export async function createLanyard(container) {
         body.setTranslation({ x: p.x, y: p.y + shift, z: p.z }, true);
       }
     }
-    updateWalls();
   };
 
   applyLayout();
@@ -799,9 +746,6 @@ export async function createLanyard(container) {
   const tmpWorld = new THREE.Vector3();
 
   let pointerId = null;
-  // Only the badge is pointer-driven. Rope links and clasp remain Rapier-dynamic,
-  // so their joints stay connected instead of being teleported apart.
-  let strapStretch = 0;
   let pressX = 0;
   let pressY = 0;
   let pressTime = 0;
@@ -821,8 +765,6 @@ export async function createLanyard(container) {
     setPointer(clientX, clientY);
     scene.updateMatrixWorld();
     raycaster.setFromCamera(pointer, camera);
-    // The ribbon is a real hit target too, so users can start a pull anywhere
-    // along the visible lanyard. Refresh its bounds because its vertices move.
     strapGeo.computeBoundingSphere();
     return raycaster.intersectObjects([coreMesh, strapMesh], false).length > 0;
   };
@@ -851,11 +793,7 @@ export async function createLanyard(container) {
     prevDragTarget.copy(cardPos);
     dragVel.set(0, 0, 0);
     lastDragTime = performance.now();
-    lastPointerX = e.clientX;
-    lastPointerY = e.clientY;
     dragTwistVelocity = 0;
-    // Drive only the card. Rapier keeps every rope/clasp joint alive and lets
-    // the articulated links follow the pull naturally (no detached hardware).
     cardBody.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
     strapStretch = 0;
   };
@@ -874,8 +812,6 @@ export async function createLanyard(container) {
     if (tmpVel.length() > ACT.maxReleaseSpeed) tmpVel.setLength(ACT.maxReleaseSpeed);
     cardBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
     cardBody.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
-    // The continuous ribbon relaxes after release; the linked hardware remains
-    // attached because no rope or clasp body was teleported during the drag.
     dragTwistVelocity *= 0.35;
     cardBody.setAngvel(
       { x: 0, y: 0, z: THREE.MathUtils.clamp(-tmpVel.x * 0.12, -2, 2) },
@@ -892,7 +828,6 @@ export async function createLanyard(container) {
     e.preventDefault();
     pointerId = e.pointerId;
     canvas.setPointerCapture(pointerId);
-    // set at gesture start so the browser keeps the pan for us, not the page
     if (e.pointerType === 'touch') canvas.style.touchAction = 'none';
     pressX = e.clientX;
     pressY = e.clientY;
@@ -919,8 +854,7 @@ export async function createLanyard(container) {
     const pointerDeltaY = e.clientY - lastPointerY;
     lastPointerX = e.clientX;
     lastPointerY = e.clientY;
-    // Horizontal finger movement winds/unwinds the flat webbing like a real
-    // ribbon; vertical movement adds a smaller torsional response.
+
     dragTwistVelocity = THREE.MathUtils.clamp(
       dragTwistVelocity * 0.72 + (pointerDeltaX - pointerDeltaY * 0.22) * 0.012,
       -0.16,
@@ -937,8 +871,6 @@ export async function createLanyard(container) {
 
     tmpWorld.copy(planeHit).add(dragOffset);
     root.worldToLocal(tmpWorld);
-    // Let the user pull in any direction, but respect the real physical reach
-    // of the lanyard. This prevents the card, ring and clasp from separating.
     dragTarget.set(
       THREE.MathUtils.clamp(tmpWorld.x, -80, 80),
       THREE.MathUtils.clamp(tmpWorld.y, -80, anchorLocal + 80),
@@ -990,7 +922,6 @@ export async function createLanyard(container) {
     }
   };
 
-  // Let the page scroll on mobile unless the finger is actually dragging the card.
   const onTouchMove = (e) => {
     if (dragging) e.preventDefault();
   };
@@ -1001,8 +932,7 @@ export async function createLanyard(container) {
   canvas.addEventListener('pointercancel', onPointerCancel);
   canvas.addEventListener('touchmove', onTouchMove, { passive: false });
 
-  // small kick so it starts swinging on load
-  cardBody.applyImpulse({ x: 0.3, y: 0, z: 0 }, true);
+  cardBody.applyImpulse({ x: 0.18, y: 0, z: 0 }, true);
 
   /* ---- pause when hidden / offscreen ------------------------------------- */
   let visible = false;
@@ -1057,72 +987,52 @@ export async function createLanyard(container) {
 }
 
 /* ------------------------------------------------------------------------- *
- * Procedural textures
+ * Procedural woven strap texture with repeating LUMINICA watermark
  * ------------------------------------------------------------------------- */
-// Grey woven ribbon with printed text, edge stripes and stitching.
 function makeStrapTextures(maxAniso) {
   const h = 512;
-  const w = h * CONFIG.strap.tileWidths;
-  const tileLength = CONFIG.strap.width * CONFIG.strap.tileWidths;
+  const w = 1024;
+  const tileLength = CONFIG.strap.tileLength;
 
   const map = document.createElement('canvas');
   map.width = w;
   map.height = h;
   const g = map.getContext('2d');
 
-  // Deep midnight textile with a subtle satin centre highlight.
-  const base = g.createLinearGradient(0, 0, 0, h);
-  base.addColorStop(0, '#080e16');
-  base.addColorStop(0.18, '#172331');
-  base.addColorStop(0.5, '#202c39');
-  base.addColorStop(0.82, '#121c28');
-  base.addColorStop(1, '#070c13');
-  g.fillStyle = base;
+  // Deep obsidian weave base
+  g.fillStyle = CONFIG.colors.strapBase;
   g.fillRect(0, 0, w, h);
 
-  // Fine diagonal herringbone weave, with a second low-contrast crossing pass.
-  for (let x = -h; x < w + h; x += 8) {
-    g.strokeStyle = 'rgba(220,205,174,0.075)';
-    g.lineWidth = 2;
+  // Fine woven microtexture across the ribbon
+  for (let x = -h; x < w + h; x += 6) {
+    g.strokeStyle = 'rgba(255,255,255,0.045)';
+    g.lineWidth = 1.5;
     g.beginPath();
     g.moveTo(x, 0);
     g.lineTo(x + h, h);
     g.stroke();
-    g.strokeStyle = 'rgba(0,0,0,0.24)';
+
+    g.strokeStyle = 'rgba(0,0,0,0.28)';
     g.beginPath();
-    g.moveTo(x + 4, 0);
-    g.lineTo(x + 4 - h, h);
+    g.moveTo(x + 3, 0);
+    g.lineTo(x + 3 - h, h);
     g.stroke();
   }
   for (let y = 0; y < h; y += 3) {
-    g.fillStyle = y % 6 === 0 ? 'rgba(255,255,255,0.035)' : 'rgba(0,0,0,0.025)';
+    g.fillStyle = y % 6 === 0 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
     g.fillRect(0, y, w, 1);
   }
 
-  // Dark bound edges and two champagne-gold piping lines.
-  const border = Math.round(h * 0.065);
-  g.fillStyle = '#050a10';
+  // Subtle stitched edge border
+  const border = Math.round(h * 0.055);
+  g.fillStyle = CONFIG.colors.strapEdge;
   g.fillRect(0, 0, w, border);
   g.fillRect(0, h - border, w, border);
-  const edgeY = [border + 12, h - border - 12];
-  edgeY.forEach((y) => {
-    const line = g.createLinearGradient(0, y - 2, 0, y + 2);
-    line.addColorStop(0, 'rgba(115,83,39,0.45)');
-    line.addColorStop(0.5, 'rgba(232,207,151,0.95)');
-    line.addColorStop(1, 'rgba(115,83,39,0.45)');
-    g.strokeStyle = line;
-    g.lineWidth = 3;
-    g.beginPath();
-    g.moveTo(0, y);
-    g.lineTo(w, y);
-    g.stroke();
-  });
 
-  // Small, evenly spaced saddle stitches close to both edges.
-  g.setLineDash([11, 9]);
-  g.strokeStyle = 'rgba(231,210,166,0.82)';
+  g.setLineDash([12, 8]);
+  g.strokeStyle = 'rgba(185,194,206,0.45)';
   g.lineWidth = 2;
-  for (const y of [border * 1.85, h - border * 1.85]) {
+  for (const y of [border * 1.6, h - border * 1.6]) {
     g.beginPath();
     g.moveTo(0, y);
     g.lineTo(w, y);
@@ -1130,37 +1040,38 @@ function makeStrapTextures(maxAniso) {
   }
   g.setLineDash([]);
 
-  // Repeating LUMINICA wordmark, stamped in a restrained warm-metal ink.
+  // Repeating LUMINICA watermark aligned cleanly along the strap
   g.save();
-  g.translate(w / 2, h / 2);
+  g.translate(0, h / 2);
   g.textAlign = 'center';
   g.textBaseline = 'middle';
+  g.font = '700 84px "Manrope", "Arial", sans-serif';
+  g.fillStyle = 'rgba(242,245,248,0.88)';
   g.shadowColor = 'rgba(0,0,0,0.65)';
-  g.shadowBlur = 7;
-  g.font = '700 104px "Manrope", "Arial", sans-serif';
-  g.fillStyle = '#e0c58d';
-  g.fillText('LUMINICA', 0, -2);
-  g.shadowBlur = 0;
-  g.font = '500 23px "DM Mono", monospace';
-  g.fillStyle = 'rgba(239,222,185,0.72)';
-  g.fillText('DE XAVIERA  ·  LX', 0, 92);
+  g.shadowBlur = 4;
+
+  const positions = [w * 0.25, w * 0.75];
+  for (const px of positions) {
+    g.fillText(CONFIG.strap.label, px, 2);
+  }
   g.restore();
 
-  // Matching micro-relief normal map for the woven fibres.
+  // Woven normal map
   const nrm = document.createElement('canvas');
   nrm.width = w;
   nrm.height = h;
   const ng = nrm.getContext('2d');
   ng.fillStyle = '#8080ff';
   ng.fillRect(0, 0, w, h);
-  for (let x = -h; x < w + h; x += 8) {
-    ng.strokeStyle = 'rgba(255,140,255,0.30)';
-    ng.lineWidth = 2;
+  for (let x = -h; x < w + h; x += 6) {
+    ng.strokeStyle = 'rgba(255,140,255,0.28)';
+    ng.lineWidth = 1.5;
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x + h, h);
     ng.stroke();
-    ng.strokeStyle = 'rgba(0,140,255,0.30)';
+
+    ng.strokeStyle = 'rgba(0,140,255,0.28)';
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x - h, h);
@@ -1181,7 +1092,6 @@ function makeStrapTextures(maxAniso) {
   return { map: mapTex, normalMap: nrmTex, tileLength };
 }
 
-// Grey placeholder face so the front and back are still distinguishable.
 function makeLabelTexture(label, maxAniso) {
   const c = document.createElement('canvas');
   c.width = 512;
@@ -1211,7 +1121,6 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
 }
 
-// Rounded rect path centred on (0,0) with a rounded slot cut near the top.
 function roundedShape(w, h, r, slotY, card) {
   const shape = new THREE.Shape();
   roundedPath(shape, 0, 0, w, h, r);
@@ -1237,7 +1146,6 @@ function roundedPath(path, cx, cy, w, h, r) {
   return path;
 }
 
-// ShapeGeometry UVs are raw shape coordinates; remap them to 0..1.
 function normalizeShapeUV(geo, w, h) {
   const uv = geo.attributes.uv;
   const pos = geo.attributes.position;
