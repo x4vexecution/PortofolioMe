@@ -26,32 +26,32 @@ const CONFIG = {
     slotWidth: 0.78,
     slotHeight: 0.22,
     slotInset: 0.44,
-    clearcoat: 0.55,
-    roughness: 0.34,
+    clearcoat: 0.65,
+    roughness: 0.28,
   },
 
-  /* Single continuous woven strap */
+  /* Single continuous elegant woven strap */
   strap: {
-    width: 0.54,
-    thickness: 0.044,
-    samples: 128,
-    tileLength: 3.2,
-    roughness: 0.58,
+    width: 0.56,
+    thickness: 0.045,
+    samples: 144,
+    tileLength: 3.1,
+    roughness: 0.48,
     label: 'LUMINICA',
   },
 
   /* Physics */
   physics: {
     gravity: -42,
-    linearDamping: 0.9,
-    angularDamping: 2.1,
-    ropeSegments: 10,
-    ropeSegmentLength: 0.34,
-    claspLength: 0.46,
+    linearDamping: 0.86,
+    angularDamping: 1.9,
+    ropeSegments: 12,
+    ropeSegmentLength: 0.29,
+    claspLength: 0.48,
     ropeDensity: 36,
     claspDensity: 18,
     cardDensity: 0.24,
-    solverIterations: 18,
+    solverIterations: 20,
     maxPhysicsSteps: 5,
     maxStepsMobile: 2,
     fixedStep: 1 / 60,
@@ -66,7 +66,7 @@ const CONFIG = {
     maxPixelRatio: 2,
   },
 
-  /* Responsive layout matching the reference framing */
+  /* Responsive layout */
   layout: {
     mobileMaxWidth: 767,
     mobileCardWidth: 0.56,
@@ -84,19 +84,19 @@ const CONFIG = {
     dragThresholdTouch: 10,
     clickMaxMs: 320,
     flipDuration: 580,
-    maxReleaseSpeed: 17,
+    maxReleaseSpeed: 18,
   },
 
-  /* Palette: matte obsidian / brushed silver-titanium */
+  /* Palette: deep luxury charcoal/slate + glossy chrome */
   colors: {
-    strapBase: '#0b0d10',
-    strapEdge: '#050608',
-    strapStitch: '#9aa2ad',
-    strapText: '#f2f5f8',
-    metal: 0xc9cfd6,
-    cardEdge: 0x15181e,
+    strapBase: '#0b0e14',
+    strapEdge: '#05070a',
+    strapStitch: '#c8d0dc',
+    strapText: '#f5f7fa',
+    metal: 0xf2f6fa,
+    cardEdge: 0x141820,
     key: 0xffffff,
-    rim: 0x9ab4d6,
+    rim: 0xdbe6f4,
     ambient: 0xffffff,
   },
 
@@ -134,7 +134,7 @@ export async function createLanyard(container) {
   });
   renderer.setClearAlpha(0);
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.04;
+  renderer.toneMappingExposure = 1.08;
   const canvas = renderer.domElement;
   container.appendChild(canvas);
   const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
@@ -150,13 +150,13 @@ export async function createLanyard(container) {
   const envRT = pmrem.fromScene(room, 0.04);
   room.dispose();
   scene.environment = envRT.texture;
-  scene.environmentIntensity = 0.95;
+  scene.environmentIntensity = 1.25;
 
-  scene.add(new THREE.AmbientLight(CONFIG.colors.ambient, 0.55));
-  const key = new THREE.DirectionalLight(CONFIG.colors.key, 2.3);
+  scene.add(new THREE.AmbientLight(CONFIG.colors.ambient, 0.6));
+  const key = new THREE.DirectionalLight(CONFIG.colors.key, 2.7);
   key.position.set(5, 9, 10);
   scene.add(key);
-  const rim = new THREE.DirectionalLight(CONFIG.colors.rim, 1.5);
+  const rim = new THREE.DirectionalLight(CONFIG.colors.rim, 1.9);
   rim.position.set(-7, -3, -8);
   scene.add(rim);
 
@@ -249,9 +249,9 @@ export async function createLanyard(container) {
   const edgeMat = new THREE.MeshPhysicalMaterial({
     color: CONFIG.colors.cardEdge,
     roughness: CARD.roughness,
-    metalness: 0.08,
+    metalness: 0.1,
     clearcoat: CARD.clearcoat,
-    clearcoatRoughness: 0.22,
+    clearcoatRoughness: 0.2,
   });
   const faceMat = (map) =>
     new THREE.MeshPhysicalMaterial({
@@ -260,7 +260,7 @@ export async function createLanyard(container) {
       roughness: CARD.roughness,
       metalness: 0.02,
       clearcoat: CARD.clearcoat,
-      clearcoatRoughness: 0.24,
+      clearcoatRoughness: 0.22,
     });
 
   const coreGeo = new THREE.ExtrudeGeometry(roundedShape(W, H, CARD.cornerRadius, slotY, CARD), {
@@ -288,80 +288,86 @@ export async function createLanyard(container) {
   backMesh.rotation.y = Math.PI;
   flipGroup.add(coreMesh, frontMesh, backMesh);
 
-  /* ---- hardware (matte silver-titanium collar + ring + swivel clip) ------ */
-  const metalMat = new THREE.MeshStandardMaterial({
+  /* ---- glossy chrome hardware -------------------------------------------- */
+  const chromeMat = new THREE.MeshPhysicalMaterial({
     color: CONFIG.colors.metal,
-    metalness: 0.86,
-    roughness: 0.28,
-    envMapIntensity: 1.45,
+    metalness: 0.96,
+    roughness: 0.08,
+    clearcoat: 1.0,
+    clearcoatRoughness: 0.06,
+    reflectivity: 1.0,
+    envMapIntensity: 2.1,
   });
 
-  // Slot reinforcement rim
-  const grommetShape = roundedShape(CARD.slotWidth + 0.1, CARD.slotHeight + 0.1, 0.08, 0, CARD);
+  // Chrome slot grommet
+  const grommetShape = roundedShape(CARD.slotWidth + 0.11, CARD.slotHeight + 0.11, 0.08, 0, CARD);
   grommetShape.holes.length = 0;
   grommetShape.holes.push(roundedPath(new THREE.Path(), 0, 0, CARD.slotWidth, CARD.slotHeight, 0.08));
   const grommetGeo = new THREE.ExtrudeGeometry(grommetShape, {
-    depth: T + 0.03,
-    bevelEnabled: false,
+    depth: T + 0.032,
+    bevelEnabled: true,
+    bevelThickness: 0.008,
+    bevelSize: 0.008,
+    bevelSegments: 2,
     curveSegments: 8,
   });
-  grommetGeo.translate(0, slotY, -(T + 0.03) / 2);
-  cardGroup.add(new THREE.Mesh(grommetGeo, metalMat));
+  grommetGeo.translate(0, slotY, -(T + 0.032) / 2);
+  cardGroup.add(new THREE.Mesh(grommetGeo, chromeMat));
 
-  // Split ring attached to badge slot
-  const ringGeo = new THREE.TorusGeometry(0.13, 0.028, 12, 36);
-  const badgeRing = new THREE.Mesh(ringGeo, metalMat);
+  // Glossy chrome split ring on card slot
+  const ringGeo = new THREE.TorusGeometry(0.135, 0.03, 14, 40);
+  const badgeRing = new THREE.Mesh(ringGeo, chromeMat);
   badgeRing.position.set(0, slotY, RING_Z);
   badgeRing.rotation.x = 0.1;
   cardGroup.add(badgeRing);
 
-  // Clean rectangular metal crimp collar at the strap end (matches reference style)
+  // Glossy chrome crimp collar at the strap end
   const crimpGroup = new THREE.Group();
   const crimpShape = new THREE.Shape();
-  roundedPath(crimpShape, 0, 0, 0.68, 0.36, 0.06);
+  roundedPath(crimpShape, 0, 0, 0.72, 0.38, 0.065);
   const crimpGeo = new THREE.ExtrudeGeometry(crimpShape, {
-    depth: 0.18,
+    depth: 0.19,
     bevelEnabled: true,
-    bevelThickness: 0.02,
-    bevelSize: 0.02,
-    bevelSegments: 2,
-    curveSegments: 8,
+    bevelThickness: 0.022,
+    bevelSize: 0.022,
+    bevelSegments: 3,
+    curveSegments: 10,
   });
-  crimpGeo.translate(0, 0, -0.09);
-  crimpGroup.add(new THREE.Mesh(crimpGeo, metalMat));
+  crimpGeo.translate(0, 0, -0.095);
+  crimpGroup.add(new THREE.Mesh(crimpGeo, chromeMat));
   root.add(crimpGroup);
 
-  // Swivel clasp connecting crimp to ring
+  // Glossy chrome swivel clasp connecting crimp to ring
   const claspGroup = new THREE.Group();
-  const eye = new THREE.Mesh(new THREE.TorusGeometry(0.075, 0.022, 8, 20), metalMat);
+  const eye = new THREE.Mesh(new THREE.TorusGeometry(0.078, 0.024, 10, 24), chromeMat);
   eye.position.y = -claspLen / 2 + 0.07;
-  const topRing = new THREE.Mesh(new THREE.TorusGeometry(0.055, 0.02, 8, 20), metalMat);
+  const topRing = new THREE.Mesh(new THREE.TorusGeometry(0.058, 0.022, 10, 24), chromeMat);
   topRing.position.y = claspLen / 2 - 0.03;
   const shankCurve = new THREE.CatmullRomCurve3([
     new THREE.Vector3(0, -claspLen / 2 + 0.13, 0),
-    new THREE.Vector3(0, -0.08, 0.015),
-    new THREE.Vector3(0, 0.08, 0.02),
+    new THREE.Vector3(0, -0.08, 0.016),
+    new THREE.Vector3(0, 0.08, 0.022),
     new THREE.Vector3(0, claspLen / 2 - 0.05, 0),
   ]);
-  const shank = new THREE.Mesh(new THREE.TubeGeometry(shankCurve, 20, 0.026, 8, false), metalMat);
+  const shank = new THREE.Mesh(new THREE.TubeGeometry(shankCurve, 24, 0.028, 10, false), chromeMat);
   const gate = new THREE.Mesh(
     new THREE.TubeGeometry(
       new THREE.CatmullRomCurve3([
-        new THREE.Vector3(0.02, -claspLen / 2 + 0.12, 0.03),
-        new THREE.Vector3(0.075, -claspLen / 2 + 0.07, 0.02),
-        new THREE.Vector3(0.05, -claspLen / 2 + 0.02, 0),
+        new THREE.Vector3(0.02, -claspLen / 2 + 0.12, 0.032),
+        new THREE.Vector3(0.078, -claspLen / 2 + 0.07, 0.022),
+        new THREE.Vector3(0.052, -claspLen / 2 + 0.02, 0),
       ]),
+      10,
+      0.015,
       8,
-      0.014,
-      6,
       false,
     ),
-    metalMat,
+    chromeMat,
   );
   claspGroup.add(eye, topRing, shank, gate);
   root.add(claspGroup);
 
-  /* ---- strap ribbon (single continuous strand) ---------------------------- */
+  /* ---- strap ribbon (single continuous elastic strand) -------------------- */
   const SAMPLES = STRAP.samples;
   const RIBBON_VERTS = SAMPLES * 6;
   const posArr = new Float32Array(RIBBON_VERTS * 3);
@@ -386,9 +392,9 @@ export async function createLanyard(container) {
   const strapMat = new THREE.MeshStandardMaterial({
     map: strapMap,
     normalMap: strapNormal,
-    normalScale: new THREE.Vector2(0.55, 0.55),
+    normalScale: new THREE.Vector2(0.58, 0.58),
     roughness: STRAP.roughness,
-    metalness: 0.02,
+    metalness: 0.04,
     side: THREE.DoubleSide,
   });
   const strapMesh = new THREE.Mesh(strapGeo, strapMat);
@@ -494,7 +500,7 @@ export async function createLanyard(container) {
   prevClaspQuat.copy(claspQuat);
   ropePos.forEach((p, i) => prevRope[i].copy(p));
 
-  /* ---- strap geometry update --------------------------------------------- */
+  /* ---- strap geometry update (elastic stretch + twist) ------------------- */
   const curvePoints = [
     new THREE.Vector3(),
     new THREE.Vector3(),
@@ -535,6 +541,11 @@ export async function createLanyard(container) {
       curvePoints[i + 2].lerpVectors(prevRope[i], ropePos[i], alpha);
     }
 
+    // As the strap is pulled taut, both ribbon width and UV tile pitch stretch
+    // elastically so the strap and LUMINICA text widen together like elastic webbing.
+    const widthScale = 1 + strapStretch * 0.28;
+    const effectiveTileLength = tileLength * (1 + strapStretch * 0.34);
+
     let length = 0;
     for (let i = 0; i < SAMPLES; i++) {
       const t = i / (SAMPLES - 1);
@@ -552,21 +563,22 @@ export async function createLanyard(container) {
         if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(0, 0, 1);
         tmpNrm.normalize();
       }
+
       if (Math.abs(strapTwist) > 1e-5) {
-        tmpNrm.applyAxisAngle(tmpTan, strapTwist * t);
+        tmpNrm.applyAxisAngle(tmpTan, strapTwist * Math.pow(t, 0.85));
       }
+
       tmpSide.crossVectors(tmpNrm, tmpTan).normalize();
       prevTan.copy(tmpTan);
 
       if (i > 0) length += tmpPoint.distanceTo(tmpPrev);
       tmpPrev.copy(tmpPoint);
 
-      // Map U along length so text reads cleanly along the vertical strap
-      const u = length / tileLength;
+      const u = length / effectiveTileLength;
       for (let j = 0; j < 6; j++) {
         const o = (i * 6 + j) * 3;
-        const x = XS[j][0] * (1 + strapStretch * 0.14);
-        const y = XS[j][1];
+        const x = XS[j][0] * widthScale;
+        const y = XS[j][1] * (1 - strapStretch * 0.12);
         posArr[o] = tmpPoint.x + tmpSide.x * x + tmpNrm.x * y;
         posArr[o + 1] = tmpPoint.y + tmpSide.y * x + tmpNrm.y * y;
         posArr[o + 2] = tmpPoint.z + tmpSide.z * x + tmpNrm.z * y;
@@ -614,7 +626,8 @@ export async function createLanyard(container) {
   const stepPhysics = () => {
     simTime += PHYS.fixedStep;
     if (!dragging) {
-      strapTwist *= 0.996;
+      strapTwist *= 0.992;
+      strapStretch = THREE.MathUtils.damp(strapStretch, 0, 10, PHYS.fixedStep);
       const sway = Math.sin(simTime * PHYS.swaySpeed) * 0.7 + Math.sin(simTime * 1.5 + 0.8) * 0.3;
       cardBody.applyImpulse({ x: sway * PHYS.swayImpulse, y: 0, z: 0 }, true);
       cardBody.applyTorqueImpulse({ x: 0, y: 0, z: Math.sin(simTime * 0.55) * 0.0012 }, true);
@@ -731,7 +744,7 @@ export async function createLanyard(container) {
   const ro = new ResizeObserver(applyLayout);
   ro.observe(container);
 
-  /* ---- pointer: click vs drag -------------------------------------------- */
+  /* ---- pointer: click vs drag + twist + elastic pull ------------------- */
   const raycaster = new THREE.Raycaster();
   const pointer = new THREE.Vector2();
   const camDir = new THREE.Vector3();
@@ -795,7 +808,6 @@ export async function createLanyard(container) {
     lastDragTime = performance.now();
     dragTwistVelocity = 0;
     cardBody.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
-    strapStretch = 0;
   };
 
   const endDrag = () => {
@@ -812,12 +824,11 @@ export async function createLanyard(container) {
     if (tmpVel.length() > ACT.maxReleaseSpeed) tmpVel.setLength(ACT.maxReleaseSpeed);
     cardBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
     cardBody.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
-    dragTwistVelocity *= 0.35;
+    dragTwistVelocity *= 0.45;
     cardBody.setAngvel(
-      { x: 0, y: 0, z: THREE.MathUtils.clamp(-tmpVel.x * 0.12, -2, 2) },
+      { x: 0, y: 0, z: THREE.MathUtils.clamp(-tmpVel.x * 0.14, -2.5, 2.5) },
       true,
     );
-    strapStretch = 0;
     ropeBodies.forEach((body) => body.wakeUp());
     claspBody.wakeUp();
   };
@@ -855,14 +866,15 @@ export async function createLanyard(container) {
     lastPointerX = e.clientX;
     lastPointerY = e.clientY;
 
+    // Horizontal & vertical pointer movement twists the ribbon along its axis
     dragTwistVelocity = THREE.MathUtils.clamp(
-      dragTwistVelocity * 0.72 + (pointerDeltaX - pointerDeltaY * 0.22) * 0.012,
-      -0.16,
-      0.16,
+      dragTwistVelocity * 0.75 + (pointerDeltaX - pointerDeltaY * 0.25) * 0.015,
+      -0.22,
+      0.22,
     );
-    strapTwist = THREE.MathUtils.clamp(strapTwist + dragTwistVelocity, -Math.PI * 0.72, Math.PI * 0.72);
+    strapTwist = THREE.MathUtils.clamp(strapTwist + dragTwistVelocity, -Math.PI * 1.15, Math.PI * 1.15);
     if (Math.abs(dragTwistVelocity) > 0.0001) {
-      cardBody.applyTorqueImpulse({ x: 0, y: dragTwistVelocity * 0.018, z: -dragTwistVelocity * 0.012 }, true);
+      cardBody.applyTorqueImpulse({ x: 0, y: dragTwistVelocity * 0.022, z: -dragTwistVelocity * 0.015 }, true);
     }
 
     setPointer(e.clientX, e.clientY);
@@ -876,19 +888,24 @@ export async function createLanyard(container) {
       THREE.MathUtils.clamp(tmpWorld.y, -80, anchorLocal + 80),
       THREE.MathUtils.clamp(tmpWorld.z, -12, 12),
     );
+
     const fromAnchor = dragTarget.clone().sub(new THREE.Vector3(0, anchorLocal, 0));
     const distance = fromAnchor.length();
-    const maxReach = anchorToCard * 0.995;
-    if (distance > maxReach) {
-      fromAnchor.setLength(maxReach);
+    // Allow slight elastic over-pull beyond rest length so stretch is felt & seen
+    const restReach = anchorToCard;
+    const maxElasticReach = anchorToCard * 1.16;
+    if (distance > maxElasticReach) {
+      fromAnchor.setLength(maxElasticReach);
       dragTarget.set(fromAnchor.x, anchorLocal + fromAnchor.y, fromAnchor.z);
     }
+
+    const effectiveDist = Math.min(distance, maxElasticReach);
     const tension = THREE.MathUtils.clamp(
-      (Math.min(distance, maxReach) / maxReach - 0.62) / 0.38,
+      (effectiveDist / restReach - 0.72) / 0.44,
       0,
       1,
     );
-    strapStretch = THREE.MathUtils.damp(strapStretch, tension, 12, 1 / 60);
+    strapStretch = THREE.MathUtils.damp(strapStretch, tension, 14, 1 / 60);
     cardBody.setNextKinematicTranslation(dragTarget);
 
     const now = performance.now();
@@ -999,38 +1016,38 @@ function makeStrapTextures(maxAniso) {
   map.height = h;
   const g = map.getContext('2d');
 
-  // Deep obsidian weave base
+  // Deep obsidian weave base with subtle satin depth
   g.fillStyle = CONFIG.colors.strapBase;
   g.fillRect(0, 0, w, h);
 
   // Fine woven microtexture across the ribbon
   for (let x = -h; x < w + h; x += 6) {
-    g.strokeStyle = 'rgba(255,255,255,0.045)';
+    g.strokeStyle = 'rgba(255,255,255,0.05)';
     g.lineWidth = 1.5;
     g.beginPath();
     g.moveTo(x, 0);
     g.lineTo(x + h, h);
     g.stroke();
 
-    g.strokeStyle = 'rgba(0,0,0,0.28)';
+    g.strokeStyle = 'rgba(0,0,0,0.3)';
     g.beginPath();
     g.moveTo(x + 3, 0);
     g.lineTo(x + 3 - h, h);
     g.stroke();
   }
   for (let y = 0; y < h; y += 3) {
-    g.fillStyle = y % 6 === 0 ? 'rgba(255,255,255,0.025)' : 'rgba(0,0,0,0.03)';
+    g.fillStyle = y % 6 === 0 ? 'rgba(255,255,255,0.028)' : 'rgba(0,0,0,0.032)';
     g.fillRect(0, y, w, 1);
   }
 
-  // Subtle stitched edge border
+  // Refined stitched edge border
   const border = Math.round(h * 0.055);
   g.fillStyle = CONFIG.colors.strapEdge;
   g.fillRect(0, 0, w, border);
   g.fillRect(0, h - border, w, border);
 
   g.setLineDash([12, 8]);
-  g.strokeStyle = 'rgba(185,194,206,0.45)';
+  g.strokeStyle = 'rgba(205,214,226,0.52)';
   g.lineWidth = 2;
   for (const y of [border * 1.6, h - border * 1.6]) {
     g.beginPath();
@@ -1046,7 +1063,7 @@ function makeStrapTextures(maxAniso) {
   g.textAlign = 'center';
   g.textBaseline = 'middle';
   g.font = '700 84px "Manrope", "Arial", sans-serif';
-  g.fillStyle = 'rgba(242,245,248,0.88)';
+  g.fillStyle = 'rgba(245,247,250,0.9)';
   g.shadowColor = 'rgba(0,0,0,0.65)';
   g.shadowBlur = 4;
 
@@ -1064,14 +1081,14 @@ function makeStrapTextures(maxAniso) {
   ng.fillStyle = '#8080ff';
   ng.fillRect(0, 0, w, h);
   for (let x = -h; x < w + h; x += 6) {
-    ng.strokeStyle = 'rgba(255,140,255,0.28)';
+    ng.strokeStyle = 'rgba(255,140,255,0.3)';
     ng.lineWidth = 1.5;
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x + h, h);
     ng.stroke();
 
-    ng.strokeStyle = 'rgba(0,140,255,0.28)';
+    ng.strokeStyle = 'rgba(0,140,255,0.3)';
     ng.beginPath();
     ng.moveTo(x, 0);
     ng.lineTo(x - h, h);
