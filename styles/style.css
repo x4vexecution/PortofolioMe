@@ -2176,15 +2176,12 @@ html body[data-theme="day"] .ambient {
   background-image:none !important;
 }
 
-/* Hanging ID badge (scripts/lanyard.js) — right side on desktop, below the copy on phones */
-.hero-lanyard{position:absolute;top:0;right:calc((min(1120px,88vw) - 100vw)/2);width:45%;height:100%;z-index:0;pointer-events:none}
-.hero-lanyard canvas{display:block;width:100%;height:100%;pointer-events:auto;touch-action:pan-y}
+/* Hanging ID badge (scripts/lanyard.js) — full-bleed canvas over the hero */
+.hero{position:relative;overflow:visible}
+.hero-lanyard{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:visible}
+.hero-lanyard canvas{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:pan-y;overflow:visible}
 .hero-lanyard canvas.is-hovering{cursor:grab}
-.hero-lanyard canvas.is-grabbing{cursor:grabbing}
-/* keep the headline above the badge, but let the pointer fall through to the canvas */
+.hero-lanyard canvas.is-grabbing{cursor:grabbing;touch-action:none}
+/* headline above the badge, pointer falls through to the canvas */
 .hero > :not(.hero-lanyard){position:relative;z-index:1;pointer-events:none}
 .hero-bottom{pointer-events:auto}
-@media(max-width:767px){
-.hero-lanyard{position:relative;top:auto;right:auto;width:100%;height:46svh;margin-top:.5rem;order:3}
-.hero-meta{order:4}
-}
