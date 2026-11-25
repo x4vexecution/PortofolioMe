@@ -1,38 +1,32 @@
-/* Hero 3D lanyard card — positioning only (behaviour lives in card3d.js) */
-.hero{position:relative}
+/* Hero 3D lanyard card — positioning only (behaviour lives in card3d.js).
+   This sits OUTSIDE .hero so it can span the full viewport width, not the
+   narrower centered content column (.section-wrap caps at 1120px). */
+main{position:relative}
 
 .hero-card3d{
-  --card3d-right: 11vw;    /* distance from the hero's right edge — raise this to shift further left */
-  --card3d-top: 2%;
-  --card3d-width: 300px;
-  --card3d-height: 560px;
-
   position:absolute;
-  top:var(--card3d-top);
-  right:var(--card3d-right);
-  width:var(--card3d-width);
-  height:var(--card3d-height);
-  max-height:70vh;
+  top:0;
+  left:0;
+  width:100%;
+  height:calc(100svh - 82px);
   z-index:3;
-  pointer-events:auto;
+  pointer-events:none;   /* card itself is still draggable — see card3d.js */
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  outline:none;
+  overflow:visible;
 }
-.hero-card3d canvas{display:block;width:100%;height:100%}
-
-@media(max-width:1180px){
-  .hero-card3d{--card3d-right:6vw;--card3d-width:260px;--card3d-height:480px}
+.hero-card3d canvas{
+  display:block;
+  width:100%;
+  height:100%;
+  background:transparent;
+  border:0;
+  box-shadow:none;
+  outline:none;
 }
 
 @media(max-width:760px){
-  .hero-card3d{
-    --card3d-right: 9vw;   /* shifted left a bit from the corner, same idea as desktop */
-    --card3d-top: 14%;
-    --card3d-width: 150px;
-    --card3d-height: 280px;
-    max-height:34vh;
-    opacity:.92;
-  }
-}
-
-@media(max-width:380px){
-  .hero-card3d{--card3d-width:128px;--card3d-height:240px}
+  .hero-card3d{height:calc(92svh - 70px)}
 }
