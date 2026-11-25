@@ -1,0 +1,135 @@
+(() => {
+'use strict';
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const reduced=matchMedia('(prefers-reduced-motion: reduce)').matches;
+const heroTypingEffect=$('.hero-typewriter');if(heroTypingEffect){const typingLines=$$('.type-line',heroTypingEffect),typingFull=typingLines.map(line=>line.textContent);if(reduced){typingLines.forEach((line,i)=>line.textContent=typingFull[i]);}else{heroTypingEffect.classList.add('is-typing');typingLines.forEach(line=>line.textContent='');let typingLine=0,typingChar=0;const typeHeroLine=()=>{if(typingLine>=typingLines.length){heroTypingEffect.classList.remove('is-typing');heroTypingEffect.classList.add('typing-done');return;}const word=typingFull[typingLine],line=typingLines[typingLine];line.textContent=word.slice(0,++typingChar);if(typingChar>=word.length){typingLine++;typingChar=0;setTimeout(typeHeroLine,220);}else setTimeout(typeHeroLine,42);};setTimeout(typeHeroLine,280);}}
+
+const coarse=matchMedia('(pointer: coarse)').matches;
+const year=$('#year'); if(year)year.textContent=String(new Date().getFullYear());
+
+if(!reduced&&!coarse&&window.VanillaTilt){try{VanillaTilt.init(Array.from(document.querySelectorAll('.about-profile-photo,.info-card,.about-detail-strip>div,.project-card,.contact-card')),{max:7,speed:520,scale:1.018,perspective:1100,gyroscope:true,gyroscopeMinAngleX:-25,gyroscopeMaxAngleX:25,gyroscopeMinAngleY:-25,gyroscopeMaxAngleY:25});}catch(e){console.warn('Tilt unavailable',e);}}
+
+// Tap-to-expand on touch screens; a second tap collapses the same card.
+if(matchMedia('(hover: none), (pointer: coarse)').matches){
+  const expandableCards=Array.from(document.querySelectorAll('.info-card,.about-detail-strip > div,.contact-card'));
+  expandableCards.forEach(card=>{
+    card.setAttribute('role',card.matches('form')?'group':'button');
+    card.setAttribute('tabindex','0');
+    card.setAttribute('aria-expanded','false');
+    const toggleExpanded=()=>{
+      const open=!card.classList.contains('is-expanded');
+      expandableCards.forEach(other=>{
+        if(other!==card){other.classList.remove('is-expanded');other.setAttribute('aria-expanded','false');}
+      });
+      card.classList.toggle('is-expanded',open);
+      card.setAttribute('aria-expanded',String(open));
+    };
+    card.addEventListener('click',event=>{
+      if(event.target.closest('a,button,input,textarea,select,label'))return;
+      toggleExpanded();
+    });
+    card.addEventListener('keydown',event=>{
+      if((event.key==='Enter'||event.key===' ')&&event.target===card){
+        event.preventDefault();toggleExpanded();
+      }
+    });
+  });
+}
+
+// Animated WebGL fog on desktop and mobile, with a lower simulation cost on phones.
+const fog=$('#fog-canvas');document.documentElement.classList.add('fog-fallback');
+const startFog=()=>{if(!fog||reduced||typeof window.WebGLFluid!=='function')return;try{
+ const mobile=matchMedia('(max-width:760px)').matches||coarse;
+ window.WebGLFluid(fog,{TRIGGER:'hover',IMMEDIATE:true,AUTO:true,INTERVAL:mobile?4200:1900,SIM_RESOLUTION:mobile?48:128,DYE_RESOLUTION:mobile?256:900,DENSITY_DISSIPATION:.965,VELOCITY_DISSIPATION:.42,PRESSURE:.78,PRESSURE_ITERATIONS:mobile?8:20,CURL:mobile?10:24,SPLAT_RADIUS:.16,SPLAT_FORCE:mobile?800:1500,SPLAT_COUNT:mobile?1:2,SPLAT_COLOR:{r:.25,g:.36,b:.92},COLORFUL:false,SHADING:!mobile,COLOR_UPDATE_SPEED:0,TRANSPARENT:true,BACK_COLOR:{r:0,g:0,b:0},BLOOM:false,BLOOM_ITERATIONS:mobile?0:2,BLOOM_RESOLUTION:mobile?64:256,BLOOM_INTENSITY:.08,BLOOM_THRESHOLD:.35,BLOOM_SOFT_KNEE:.7,SUNRAYS:false});
+ document.documentElement.classList.remove('fog-fallback');
+ let inside=false,lastX=-1,lastY=-1;const forwardPointer=e=>{const x=e.clientX,y=e.clientY;if(!Number.isFinite(x)||!Number.isFinite(y)||x<0||y<0||x>innerWidth||y>innerHeight)return;if(!inside){inside=true;fog.dispatchEvent(new MouseEvent('mouseenter',{clientX:x,clientY:y,bubbles:false}));}if(Math.abs(x-lastX)+Math.abs(y-lastY)<1.5)return;lastX=x;lastY=y;fog.dispatchEvent(new MouseEvent('mousemove',{clientX:x,clientY:y,bubbles:true,view:window}));};
+ document.addEventListener('pointermove',forwardPointer,{passive:true});addEventListener('blur',()=>{inside=false;lastX=lastY=-1;});document.documentElement.classList.add('fluid-fog-ready');
+ }catch(e){console.warn('WebGL background unavailable',e);}};
+if(!reduced){if(window.WebGLFluid)startFog();else addEventListener('load',startFog,{once:true});}
+
+// Navigation remains usable as ordinary anchor links if this script fails.
+const links=$$('.mobile-nav > a,.desktop-nav > a'),bars=$$('.mobile-nav,.desktop-nav');
+const sections=['home','about','resume','contact'].map(id=>document.getElementById(id)).filter(Boolean);
+const indicators=()=>bars.forEach(bar=>{const mark=$('.nav-indicator',bar),active=$('a.active',bar);if(!mark||!active)return;const b=bar.getBoundingClientRect(),a=active.getBoundingClientRect();mark.style.width=a.width+'px';mark.style.height=a.height+'px';mark.style.transform='translate3d('+(a.left-b.left)+'px,'+(a.top-b.top)+'px,0)';mark.classList.add('is-ready');});
+links.forEach(link=>link.addEventListener('click',e=>{const href=link.getAttribute('href');if(!href||href[0]!=='#')return;const target=document.getElementById(href.slice(1));if(!target)return;e.preventDefault();target.scrollIntoView({behavior:reduced?'auto':'smooth',block:'start'});history.replaceState(null,'',href);}));
+let queued=false;const updateNav=()=>{if(!sections.length)return;const marker=scrollY+Math.min(innerHeight*.36,260);let current=sections[0];sections.forEach(s=>{if(s.offsetTop<=marker)current=s;});const activeId=current.id;links.forEach(a=>a.classList.toggle('active',a.getAttribute('href')==='#'+activeId));indicators();queued=false;};
+if(sections.length){addEventListener('scroll',()=>{if(!queued){queued=true;requestAnimationFrame(updateNav);}},{passive:true});addEventListener('resize',updateNav,{passive:true});addEventListener('load',updateNav,{once:true});updateNav();}
+
+// Accessible More dropdown; closes on outside click, Escape, or navigation.
+$$('.more-toggle').forEach(button=>button.addEventListener('click',()=>{const parent=button.closest('.nav-more'),open=!parent.classList.contains('open');$$('.nav-more').forEach(item=>{item.classList.remove('open');$('.more-toggle',item).setAttribute('aria-expanded','false');});if(open){parent.classList.add('open');button.setAttribute('aria-expanded','true');}}));
+document.addEventListener('click',event=>{if(!event.target.closest('.nav-more'))$$('.nav-more').forEach(item=>{item.classList.remove('open');$('.more-toggle',item).setAttribute('aria-expanded','false');});});
+document.addEventListener('keydown',event=>{if(event.key==='Escape')$$('.nav-more').forEach(item=>{item.classList.remove('open');$('.more-toggle',item).setAttribute('aria-expanded','false');});});
+
+// Shared visitor clock for non-home pages.
+if(!window.__visitorClockStarted){window.__visitorClockStarted=true;
+const time=$('#visitor-time'),date=$('#visitor-date');let visitorZone='',clockFormatters=null;
+const renderClock=()=>{const now=new Date();try{const z=Intl.DateTimeFormat().resolvedOptions().timeZone||'UTC';if(z!==visitorZone||!clockFormatters){visitorZone=z;clockFormatters={t:new Intl.DateTimeFormat(undefined,{timeZone:z,hour:'2-digit',minute:'2-digit',second:'2-digit',hour12:true}),d:new Intl.DateTimeFormat(undefined,{timeZone:z,weekday:'short',month:'short',day:'numeric',year:'numeric'}),o:new Intl.DateTimeFormat(undefined,{timeZone:z,timeZoneName:'shortOffset'})}}if(time)time.textContent=clockFormatters.t.format(now).toUpperCase();if(date){const o=clockFormatters.o.formatToParts(now).find(p=>p.type==='timeZoneName')?.value||'UTC';date.textContent=clockFormatters.d.format(now)+' · '+o;date.title='Live local time · '+visitorZone}const h=Number(new Intl.DateTimeFormat('en-GB',{timeZone:visitorZone,hour:'2-digit',hourCycle:'h23'}).format(now));if(window.SiteTheme)window.SiteTheme.refresh();else document.body.dataset.theme=h>=7&&h<19?'day':'night'}catch(e){if(time)time.textContent=now.toLocaleTimeString();if(date)date.textContent=now.toLocaleDateString()+' · Local time'}};
+renderClock();setInterval(renderClock,1000);addEventListener('focus',renderClock);document.addEventListener('visibilitychange',()=>{if(!document.hidden)renderClock()});
+
+
+}
+// Contact form: timeout and JSON error handling prevent a stuck submit state.
+const form=$('#contact-form'),status=$('#form-status'),submit=form&&$('button[type=submit]',form);
+if(form)form.addEventListener('submit',async e=>{e.preventDefault();if(!form.reportValidity())return;const data=Object.fromEntries(new FormData(form).entries());if(data._honey)return;if(submit)submit.disabled=true;if(status)status.textContent='Sending your message…';const controller=new AbortController(),timeout=setTimeout(()=>controller.abort(),15000);try{
+ const response=await fetch('https://formsubmit.co/ajax/luminac21@admin.id',{method:'POST',headers:{'Content-Type':'application/json',Accept:'application/json'},body:JSON.stringify({name:data.name,email:data.email,message:data.message,_subject:'New portfolio message from '+data.name,_template:'table'}),signal:controller.signal});
+ const result=await response.json().catch(()=>({}));if(!response.ok||result.success===false)throw new Error(result.message||'Message service error');form.reset();if(status)status.textContent='Message sent! Thanks for reaching out.';
+ }catch(err){if(status)status.textContent=err.name==='AbortError'?'Request timed out. Please try again or email luminac21@admin.id.':'Could not send right now. Please email luminac21@admin.id directly.';}finally{clearTimeout(timeout);if(submit)submit.disabled=false;}});
+
+// Wait for both the playlist and YouTube API; either may load first.
+const list=$('#music-tracklist');
+if(list){
+const count=$('#music-count'),title=$('#music-current-title'),musicStatus=$('#music-player-status');
+let tracks=[],activeIndex=-1,player=null,apiReady=!!(window.YT&&window.YT.Player),playerReady=false;
+const setMusicStatus=m=>{if(musicStatus)musicStatus.textContent=m;};
+const markTrack=()=>{if(list)$$('.music-track',list).forEach((el,i)=>{const active=i===activeIndex;el.classList.toggle('active',active);el.setAttribute('aria-current',active?'true':'false');});if(title)title.textContent=activeIndex<0?'Choose a track':tracks[activeIndex].title||'Untitled track '+String(activeIndex+1).padStart(2,'0');const detail=$('#music-current-meta');if(detail){const track=tracks[activeIndex]||{};detail.textContent=activeIndex<0?'Artist · Album · Genre':[track.artist||'Artist unavailable',track.album||'Album not listed',(track.genre||[]).join(', ')||'Genre unavailable'].join(' · ');}};
+const playTrack=i=>{if(!tracks.length)return;activeIndex=(i+tracks.length)%tracks.length;markTrack();if(player&&playerReady){player.loadVideoById(tracks[activeIndex].id);setMusicStatus('Loading selected track…');}else setMusicStatus('Player is loading. Try again in a moment.');};
+const createPlayer=()=>{const mount=$('#youtube-player');if(!apiReady||player||!mount||!tracks.length)return;player=new window.YT.Player('youtube-player',{width:'100%',height:'100%',videoId:tracks[0].id,playerVars:{enablejsapi:1,playsinline:1,controls:1,rel:0,origin:location.origin},events:{
+ onReady:()=>{playerReady=true;setMusicStatus('Ready. Choose a track to play.');if(activeIndex>=0)playTrack(activeIndex);},
+ onStateChange:e=>{const s=window.YT.PlayerState;if(e.data===s.PLAYING)setMusicStatus('Playing');else if(e.data===s.PAUSED)setMusicStatus('Paused');else if(e.data===s.BUFFERING)setMusicStatus('Buffering…');else if(e.data===s.ENDED)setMusicStatus('Track finished');},
+ onError:e=>setMusicStatus('This video cannot be embedded (YouTube error '+e.data+'). Choose another track.')
+ }});};
+window.onYouTubeIframeAPIReady=()=>{apiReady=true;createPlayer();};
+const renderTracks=()=>{if(!list)return;list.replaceChildren();tracks.forEach((track,i)=>{const b=document.createElement('button');b.type='button';b.className='music-track';b.setAttribute('aria-label','Play track '+(i+1));const n=document.createElement('span');n.className='track-index';n.textContent=String(i+1).padStart(2,'0');const d=document.createElement('span');d.className='track-details';const strong=document.createElement('strong');strong.textContent=track.title||'Track '+String(i+1).padStart(2,'0');const small=document.createElement('small');small.textContent=[track.artist||'Artist unavailable',track.album||'Album not listed',(track.genre||[]).join(', ')||'Genre unavailable'].join(' · ');d.append(strong,small);const action=document.createElement('span');action.className='track-state';action.textContent='▶';b.append(n,d,action);b.addEventListener('click',()=>playTrack(i));list.append(b);});markTrack();};
+const loadPlaylist=async()=>{
+ if(!list)return;
+ const sources=[new URL('/music/playlist.json',location.origin).href,'https://raw.githubusercontent.com/x4vexecution/Portfolio/main/music/playlist.json'];
+ let lastError=null,data=null;
+ for(const source of sources){
+  try{
+   const response=await fetch(source,{cache:'no-store'});
+   if(!response.ok)throw new Error('Playlist request failed ('+response.status+')');
+   const payload=await response.json();
+   if(!payload||!Array.isArray(payload.tracks))throw new Error('Playlist JSON has no tracks array');
+   data=payload;break;
+  }catch(error){lastError=error;console.warn('Playlist source failed:',source,error);}
+ }
+ try{
+  if(!data)throw lastError||new Error('Playlist could not be reached');
+  tracks=data.tracks.map(track=>{
+   try{
+    const url=new URL(track.url);
+    if(!['youtube.com','www.youtube.com','m.youtube.com','youtu.be'].includes(url.hostname))return null;
+    const id=url.hostname==='youtu.be'?url.pathname.split('/')[1]:(url.searchParams.get('v')||url.pathname.match(/\/embed\/([^/]+)/)?.[1]);
+    return id&&/^[A-Za-z0-9_-]{11}$/.test(id)?{id,title:typeof track.title==='string'?track.title:'',artist:typeof track.artist==='string'?track.artist:'',album:typeof track.album==='string'?track.album:'',genre:Array.isArray(track.genre)?track.genre:[],metadataStatus:track.metadataStatus||''}:null;
+   }catch(_){return null;}
+  }).filter(Boolean);
+  if(!tracks.length)throw new Error('Playlist loaded, but contains no valid YouTube video IDs');
+  if(count)count.textContent=String(tracks.length).padStart(2,'0')+' TRACKS';
+  renderTracks();setMusicStatus('Playlist loaded. Choose a track to play.');
+  createPlayer();
+ }catch(err){
+  if(count)count.textContent='LIBRARY UNAVAILABLE';
+  list.textContent='Could not load the music library. '+(err&&err.message?err.message:'Check your connection and try again.');
+  setMusicStatus('Playlist unavailable. The track list could not be loaded.');
+  console.error('Playlist unavailable',err);
+ }
+};
+loadPlaylist();
+if(!apiReady){const api=document.createElement('script');api.src='https://www.youtube.com/iframe_api';api.async=true;api.onerror=()=>setMusicStatus('YouTube player API could not load. Check your connection.');document.head.append(api);}else createPlayer();
+}
+
+// Progressive reveal only; no content is hidden if IntersectionObserver is unavailable.
+const reveal=$$('.section-wrap',$('main')||document);
+if('IntersectionObserver'in window&&!reduced){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){entry.target.classList.add('section-arrived');observer.unobserve(entry.target);}}),{threshold:.06,rootMargin:'0px 0px -8% 0px'});reveal.forEach(section=>observer.observe(section));}else reveal.forEach(section=>section.classList.add('section-arrived'));
+const socials=$('.socials');if(socials&&'IntersectionObserver'in window&&!reduced){const observer=new IntersectionObserver(entries=>entries.forEach(entry=>{if(entry.isIntersecting){socials.classList.add('is-formed');observer.unobserve(socials);}}),{threshold:.15});observer.observe(socials);}else if(socials)socials.classList.add('is-formed');
+})();

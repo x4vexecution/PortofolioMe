@@ -1,0 +1,515 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#080b16"><meta name="description" content="Premium liquid glass math calculator, currency converter, unit converter and clinical laboratory calculator.">
+<title>Calculator Studio | Luminica De Xaviera</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Manrope:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/styles/style.css"><link rel="stylesheet" href="/styles/liquid-glass.css"><link rel="stylesheet" href="/styles/nav.css"><script src="/scripts/liquid-glass.js" defer></script>
+<style>
+:root{--glass-bg:rgba(20,27,49,.54);--glass-edge:rgba(192,204,255,.19);--glass-highlight:rgba(255,255,255,.11);--violet:#8b75ff;--electric:#5b9dff;--soft:#aeb9d5}
+body{min-height:100vh;background:radial-gradient(ellipse at 12% 12%,rgba(84,61,194,.25),transparent 34%),radial-gradient(ellipse at 88% 28%,rgba(31,104,191,.2),transparent 34%),linear-gradient(145deg,#080b16 0%,#0a1020 48%,#090b17 100%);overflow-x:hidden}
+body:before,body:after{content:"";position:fixed;pointer-events:none;z-index:-1;border-radius:50%;filter:blur(70px);opacity:.3}
+body:before{width:280px;height:280px;background:#4937b7;top:28%;left:-120px}body:after{width:360px;height:360px;background:#164d94;right:-170px;bottom:4%}
+.tool-wrap{width:min(1180px,92vw);margin:38px auto 150px;position:relative;z-index:1}.tool-hero{padding:22px 0 18px}.tool-kicker{font:10px var(--mono);letter-spacing:2px;color:#9f9bff}.tool-hero h1{font-size:clamp(40px,7vw,76px);letter-spacing:-.075em;line-height:1.02;margin:12px 0}.tool-hero h1 span{background:linear-gradient(100deg,#fff 10%,#b8aaff 55%,#6fc9ff);background-clip:text;color:transparent}.tool-hero p{max-width:670px;color:#9da9c4;line-height:1.8;font-size:14px}
+.glass,.glass-card{position:relative;isolation:isolate;background:linear-gradient(145deg,rgba(34,43,73,.62),rgba(13,19,37,.63));border:1px solid var(--glass-edge);box-shadow:inset 0 1px 0 var(--glass-highlight),inset 0 -1px 0 rgba(255,255,255,.025),0 24px 70px rgba(0,0,0,.25);backdrop-filter:blur(24px) saturate(145%);-webkit-backdrop-filter:blur(24px) saturate(145%)}
+.glass:before{content:"";position:absolute;inset:0;border-radius:inherit;pointer-events:none;background:linear-gradient(125deg,rgba(255,255,255,.10),transparent 25%,transparent 72%,rgba(126,145,255,.06));opacity:.75;z-index:-1}
+.glass-navigation{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:12px;margin:26px 0 22px}
+.nav-card{min-width:0;min-height:118px;padding:17px 8px 14px;border-radius:22px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:#dfe5ff;text-align:center;text-decoration:none;cursor:pointer;transition:transform .28s cubic-bezier(.2,.8,.2,1),border-color .25s,box-shadow .25s,background .25s}
+.nav-card:after{content:"";position:absolute;inset:1px;border-radius:inherit;background:linear-gradient(145deg,rgba(255,255,255,.09),transparent 42%);pointer-events:none}
+.nav-card svg{width:30px;height:30px;stroke:#b7b8ff;stroke-width:1.65;fill:none;filter:drop-shadow(0 3px 10px rgba(117,108,255,.35));transition:transform .28s,color .25s}
+.nav-card span{font-size:11px;line-height:1.3;font-weight:700;max-width:100%;overflow-wrap:anywhere}
+.nav-card:hover{transform:translateY(-5px);border-color:rgba(157,147,255,.52);box-shadow:inset 0 1px 0 #ffffff24,0 14px 35px #090b1b99,0 0 22px #7166ff24}
+.nav-card:hover svg{transform:translateY(-2px) scale(1.08);stroke:#e3ddff}
+.nav-card.active{animation:jellyFloat 5.2s ease-in-out infinite;background:linear-gradient(145deg,rgba(111,93,230,.42),rgba(43,62,130,.4));border-color:rgba(174,159,255,.68);box-shadow:inset 0 1px 0 #ffffff32,0 0 0 1px #8875ff20,0 0 30px rgba(111,91,255,.25),0 16px 40px #05081470}
+.nav-card.active svg{stroke:#fff;filter:drop-shadow(0 0 9px #9d8cff)}\n@keyframes jellyFloat{0%,100%{transform:translateY(0)}50%{transform:translateY(-3px)}}\n.nav-card:hover:after{animation:glassShine .7s ease}\n@keyframes glassShine{0%{opacity:.25;transform:translateX(-15%)}100%{opacity:.9;transform:translateX(15%)}}
+.tool-panel{display:none;border-radius:28px;padding:clamp(18px,3.3vw,34px);animation:panelRise .32s ease both}.tool-panel.active{display:block}
+@keyframes panelRise{from{opacity:0;transform:translateY(9px)}to{opacity:1;transform:none}}
+.panel-heading{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;margin-bottom:24px}.panel-heading h2{font-size:clamp(25px,4vw,38px);letter-spacing:-.055em;margin:0 0 8px}.panel-heading p{font-size:12px;color:#98a5c2;line-height:1.7;margin:0;max-width:660px}.panel-tag{font:9px var(--mono);letter-spacing:1.3px;color:#b9b1ff;border:1px solid #9c91ff44;border-radius:30px;padding:9px 12px;white-space:nowrap}
+.glass-input,.glass-select{width:100%;min-width:0;min-height:50px;border:1px solid rgba(180,194,245,.2);border-radius:15px;padding:13px 15px;color:#f3f5ff;background:rgba(7,12,26,.58);outline:none;font:14px var(--sans);box-shadow:inset 0 1px 4px #0003;transition:border-color .2s,box-shadow .2s}
+.glass-input:focus,.glass-select:focus{border-color:#9d8aff;box-shadow:0 0 0 3px #8773ff24,inset 0 1px 4px #0003}
+.glass-input::placeholder{color:#697795}.glass-select option{background:#10182b;color:#fff}
+.field{display:grid;gap:8px;min-width:0}.field label{font:9px var(--mono);letter-spacing:1.45px;color:#a8b3ce}
+.glass-button{border:1px solid rgba(199,207,255,.19);border-radius:15px;padding:13px 18px;color:#f9faff;font-size:12px;font-weight:800;cursor:pointer;background:rgba(255,255,255,.07);box-shadow:inset 0 1px 0 #ffffff1b,0 8px 22px #0003;transition:transform .2s,filter .2s,box-shadow .2s}
+.glass-button:hover{transform:translateY(-2px);filter:brightness(1.13);box-shadow:0 10px 28px #080a1a99,0 0 20px #8273ff22}.glass-button:active{transform:scale(.97)}
+.glass-button.primary{border-color:#a69aff88;background:linear-gradient(110deg,#6256d8,#546fe8 55%,#398edc);box-shadow:inset 0 1px 0 #ffffff38,0 10px 28px #4d55c54d,0 0 24px #7165ff26}
+.tool-actions{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}.status-line{font:10px var(--mono);color:#9caed2;min-height:18px;margin-top:13px}.status-line.success{color:#83e6c2}.status-line.error{color:#ff9aab}
+.convert-result{margin-top:20px;padding:22px;border-radius:20px;background:linear-gradient(130deg,rgba(77,72,164,.22),rgba(29,91,151,.16));border:1px solid rgba(145,150,255,.2);box-shadow:inset 0 1px 0 #ffffff12}.result-label{font:9px var(--mono);letter-spacing:1.6px;color:#aeb9d5}.result-value{font:clamp(25px,5vw,42px) var(--mono);font-weight:500;letter-spacing:-.05em;overflow-wrap:anywhere;margin-top:9px;color:#fff;text-shadow:0 0 24px #7e8cff40}.result-meta{font-size:11px;color:#a3b0cc;line-height:1.7;margin-top:8px}.result-value.updated{animation:resultPop .32s ease}@keyframes resultPop{from{opacity:.35;transform:translateY(5px)}to{opacity:1;transform:none}}
+.math-layout{max-width:460px;margin:auto;padding:18px;border-radius:24px;background:rgba(5,10,23,.47);border:1px solid #b8c6ff20;box-shadow:inset 0 2px 12px #0005}
+.calc-display{min-height:90px;padding:18px 14px 8px;text-align:right;font:clamp(30px,6vw,46px) var(--mono);overflow-wrap:anywhere;color:#f8f8ff}.calc-expression{min-height:20px;text-align:right;font:10px var(--mono);color:#8290b0;margin:0 4px 15px}.calc-keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:9px}
+.calc-keys button{min-height:58px;border-radius:17px;border:1px solid #b9c7ff18;color:#e7ebff;background:linear-gradient(145deg,rgba(63,76,115,.48),rgba(23,31,54,.68));font:600 17px var(--sans);cursor:pointer;box-shadow:inset 0 1px 0 #ffffff15,0 5px 14px #0002;transition:transform .2s,background .2s,box-shadow .2s}
+.calc-keys button:hover{background:linear-gradient(145deg,#46517f,#26385f);box-shadow:0 0 18px #7669ff22}.calc-keys button:active{transform:scale(.95)}.calc-keys button.op{color:#c0b8ff}.calc-keys button.equal{background:linear-gradient(120deg,#7558e9,#3e8de8);border-color:#b4a3ff66;box-shadow:0 0 24px #7868ff44}.calc-keys button.wide{grid-column:span 2}
+.currency-shell{max-width:900px;margin:auto}.currency-topline{display:flex;align-items:center;gap:8px;color:#9eafd0;font:10px var(--mono);letter-spacing:1px}.live-dot{width:7px;height:7px;border-radius:50%;background:#66718b;box-shadow:0 0 0 4px #66718b20}.live-dot.ready{background:#5be0ad;box-shadow:0 0 0 4px #5be0ad20,0 0 13px #5be0ad88}
+.currency-amount{margin:18px 0 20px}.currency-pair{display:grid;grid-template-columns:minmax(0,1fr) 58px minmax(0,1fr);gap:12px;align-items:center}.currency-card{padding:18px;border-radius:21px;background:rgba(7,12,25,.48);border:1px solid #aabaff22;min-width:0}.currency-card-head{display:flex;justify-content:space-between;align-items:center;font:9px var(--mono);letter-spacing:1.3px;color:#a3b1cf;margin-bottom:14px}.currency-identity{display:flex;align-items:center;gap:11px;margin-bottom:13px}.currency-flag{width:36px;height:27px;object-fit:cover;border-radius:5px;box-shadow:0 2px 10px #0007;background:#18213a}.currency-flag-fallback{width:36px;height:27px;border-radius:5px;display:grid;place-items:center;background:linear-gradient(135deg,#6557d6,#2979bd);font-weight:800;color:white}.currency-code{font-size:18px;font-weight:800;letter-spacing:-.04em}.currency-name{font-size:10px;color:#95a3c1;margin-top:2px}.currency-swap{width:48px;height:48px;border-radius:50%;display:grid;place-items:center;border:1px solid #a89aff66;background:linear-gradient(145deg,#6854d7aa,#3578d6aa);color:white;cursor:pointer;box-shadow:0 0 25px #7666ff30,inset 0 1px 0 #ffffff40;transition:transform .25s}.currency-swap:hover{transform:rotate(180deg)}.currency-swap svg{width:20px;height:20px;stroke:currentColor;fill:none;stroke-width:1.8}.currency-input{border:0!important;background:transparent!important;box-shadow:none!important;padding:5px 0!important;font:clamp(24px,4vw,34px) var(--mono)!important;min-height:45px!important}
+.currency-footer{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:18px}.currency-footer .glass-button{min-width:180px}.currency-rate{font:10px var(--mono);color:#9ba9c8;line-height:1.6}
+.convert-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.analyte-field{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;margin-top:17px}.hidden{display:none!important}
+.category-pills{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 20px}.category-pill{display:inline-flex;align-items:center;gap:7px;border:1px solid #aebeff24;background:#ffffff08;color:#b5c0da;padding:9px 13px;border-radius:30px;font-size:10px;cursor:pointer;transition:.2s}.category-pill svg{width:15px;height:15px;stroke:currentColor;fill:none;stroke-width:1.7;flex:none}.category-pill.active{color:white;border-color:#9f91ff99;background:#7968ed35;box-shadow:0 0 17px #7567ff24}
+.education-grid,.tools-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}.info-glass{border:1px solid #b7c4ff20;border-radius:19px;background:#ffffff06;padding:18px}.info-glass h3{font-size:14px;margin:0 0 8px}.info-glass p{font-size:11px;color:#9eabc7;line-height:1.8;margin:0}
+.bottom-glass-nav{position:fixed;z-index:30;left:50%;bottom:max(16px,env(safe-area-inset-bottom));transform:translateX(-50%);display:flex;align-items:center;gap:5px;padding:8px;border-radius:30px;background:rgba(9,14,29,.78);border:1px solid rgba(190,203,255,.2);box-shadow:inset 0 1px 0 #ffffff1b,0 15px 45px #0009,0 0 24px #6f64e51a;backdrop-filter:blur(28px) saturate(155%);-webkit-backdrop-filter:blur(28px) saturate(155%);max-width:calc(100vw - 24px)}
+.bottom-glass-nav a,.bottom-glass-nav button{min-width:62px;padding:8px 12px;border:0;border-radius:23px;background:transparent;color:#9aa8c5;font-size:9px;font-weight:700;display:flex;flex-direction:column;align-items:center;gap:4px;white-space:nowrap;cursor:pointer;text-decoration:none;transition:background .22s,color .22s,transform .22s}
+.bottom-glass-nav svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.7}.bottom-glass-nav .active{background:linear-gradient(140deg,#7c65eb80,#367fd26b);color:#fff;box-shadow:inset 0 1px 0 #ffffff30,0 0 17px #8170ff30}.bottom-glass-nav a:active,.bottom-glass-nav button:active{transform:scale(.94)}
+.bottom-more{position:relative}.bottom-more-menu{display:none;position:absolute;bottom:calc(100% + 13px);right:0;min-width:155px;padding:8px;border-radius:16px;background:rgba(11,17,34,.95);border:1px solid #b8c5ff30;box-shadow:0 12px 35px #0009;backdrop-filter:blur(24px)}.bottom-more.open .bottom-more-menu{display:grid}.bottom-more-menu a{display:block;min-width:0;text-align:left;font-size:11px;padding:12px;border-radius:10px}
+:focus-visible{outline:2px solid #a99aff!important;outline-offset:3px}
+@media(max-width:1100px){.glass-navigation{grid-template-columns:repeat(4,minmax(0,1fr))}.nav-card{min-height:104px}}
+@media(max-width:580px){.tool-wrap{width:92vw;margin:25px auto 145px}.glass-navigation{gap:8px;margin:20px 0}.nav-card{min-height:90px;padding:12px 5px;border-radius:18px;gap:7px}.nav-card svg{width:25px;height:25px}.nav-card span{font-size:9px}.tool-panel{border-radius:22px;padding:17px}.panel-heading{display:block}.panel-tag{display:inline-block;margin-top:12px}.currency-pair{grid-template-columns:minmax(0,1fr) 38px minmax(0,1fr);gap:6px}.currency-card{padding:12px 9px}.currency-flag,.currency-flag-fallback{width:28px;height:21px}.currency-code{font-size:15px}.currency-name{font-size:8px}.currency-input{font-size:22px!important}.currency-swap{width:36px;height:36px}.convert-grid,.analyte-field,.education-grid,.tools-grid{grid-template-columns:1fr}.math-layout{padding:12px}.calc-keys{gap:7px}.calc-keys button{min-height:53px;border-radius:14px}.bottom-glass-nav{width:calc(100vw - 20px);justify-content:space-around;gap:0;padding:7px 4px}.bottom-glass-nav a,.bottom-glass-nav button{min-width:0;flex:1;padding:8px 3px;font-size:8px}.bottom-glass-nav svg{width:16px;height:16px}}
+@media(max-width:360px){.nav-card span{font-size:8px}.nav-card{min-height:82px}.currency-pair{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr)}.currency-swap{width:30px;height:30px}}
+@media(prefers-reduced-motion:reduce){.nav-card.active{animation:none}*,*:before,*:after{animation-duration:.01ms!important;animation-iteration-count:1!important;transition-duration:.01ms!important;scroll-behavior:auto!important}}
+@supports not ((backdrop-filter:blur(2px)) or (-webkit-backdrop-filter:blur(2px))){.glass,.bottom-glass-nav{background:rgba(16,23,43,.96)}}
+
+/* Math + Scientific calculator: circular glass bubble keypad */
+.calc-mode-switch{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;margin:-4px auto 20px}
+.calc-mode{border:1px solid rgba(184,195,255,.2);border-radius:999px;padding:11px 18px;background:rgba(255,255,255,.045);color:#9eabc8;font:700 11px var(--sans);cursor:pointer;transition:background .22s,color .22s,border-color .22s,box-shadow .22s}
+.calc-mode.active{color:#fff;border-color:rgba(162,146,255,.68);background:linear-gradient(120deg,rgba(117,83,226,.48),rgba(53,126,209,.38));box-shadow:inset 0 1px 0 #ffffff2b,0 0 20px rgba(111,96,255,.2)}
+.math-layout{max-width:690px;padding:18px 16px 14px;border-radius:28px;background:rgba(6,9,16,.42);border-color:rgba(190,202,235,.12)}
+.calc-display{min-height:82px;padding:18px 12px 5px;font-size:clamp(30px,6vw,48px)}
+.calc-expression{min-height:22px;margin:0 4px 19px}
+.calc-keys{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px}
+.calc-keys.scientific{grid-template-columns:repeat(5,minmax(0,1fr));gap:12px}
+.calc-keys button{position:relative;isolation:isolate;aspect-ratio:1/1;min-width:0;min-height:0;width:100%;padding:4px;border-radius:50%;border:1px solid rgba(220,228,255,.19);background:radial-gradient(ellipse at 32% 22%,rgba(255,255,255,.2),transparent 43%),linear-gradient(145deg,rgba(102,108,122,.58),rgba(36,40,49,.92));color:#e8ebf4;font:500 clamp(16px,3.2vw,27px) var(--sans);cursor:pointer;box-shadow:inset 0 2px 3px rgba(255,255,255,.22),inset 0 -4px 9px rgba(0,0,0,.28),0 7px 17px rgba(0,0,0,.34);transition:transform .2s,filter .2s,box-shadow .2s,border-color .2s;animation:calcBubbleFloat 6.5s ease-in-out infinite;animation-delay:calc(var(--bubble-index,0)*-170ms)}
+.calc-keys button:nth-child(5n+2){--bubble-index:2}.calc-keys button:nth-child(5n+3){--bubble-index:4}.calc-keys button:nth-child(5n+4){--bubble-index:1}.calc-keys button:nth-child(5n){--bubble-index:3}
+.calc-keys button:hover{filter:brightness(1.18);border-color:rgba(219,225,255,.38);box-shadow:inset 0 2px 4px #ffffff35,0 10px 23px #0007,0 0 16px #8b83ff22;transform:translateY(-3px) scale(1.025)}
+.calc-keys button:active{transform:scale(.93);filter:brightness(1.25)}
+.calc-keys button.op{color:#f3f4fa;background:radial-gradient(ellipse at 30% 20%,#ffffff30,transparent 44%),linear-gradient(145deg,#555965,#242832)}
+.calc-keys button.equal{color:#fff;border-color:#ffbd83;background:radial-gradient(ellipse at 30% 20%,#ffffff66,transparent 46%),linear-gradient(145deg,#ffbd79,#f28a31);box-shadow:inset 0 2px 4px #ffffff66,0 8px 22px #f28a3144}
+.calc-keys button.utility{color:#b8c0d1;font-size:clamp(13px,2.3vw,22px)}
+.calc-keys button.mode-key{color:#ff9a43}
+.calc-keys button.mode-key.selected{background:radial-gradient(ellipse at 30% 20%,#ffffff36,transparent 45%),linear-gradient(145deg,#7b4d2e,#33251f);border-color:#ff9a43;color:#ffad64}
+.calc-keys.basic button{aspect-ratio:1.18/1;border-radius:24px;font-size:clamp(19px,3.5vw,28px);animation-duration:7s}
+.calc-keys.basic button.equal{background:linear-gradient(120deg,#ffb66f,#f28a31)}
+.calc-hint{text-align:center;color:#77839b;font:9px var(--mono);letter-spacing:.35px;margin-top:16px}
+@keyframes calcBubbleFloat{0%,100%{translate:0 0}50%{translate:0 -2.5px}}
+@media(max-width:580px){
+ .math-layout{padding:13px 10px 12px;border-radius:23px}
+ .calc-mode-switch{gap:6px;margin-bottom:16px}
+ .calc-mode{padding:10px 13px;font-size:10px}
+ .calc-keys,.calc-keys.scientific{gap:8px}
+ .calc-keys button{font-size:clamp(15px,4.1vw,23px);box-shadow:inset 0 2px 3px #ffffff28,inset 0 -4px 8px #0005,0 5px 12px #0006}
+ .calc-keys.basic button{border-radius:20px;font-size:clamp(18px,5vw,25px)}
+ .calc-display{min-height:72px;padding:13px 8px 4px}
+ .calc-expression{margin-bottom:15px}
+}
+@media(max-width:360px){.calc-keys,.calc-keys.scientific{gap:6px}.math-layout{padding:11px 8px}.calc-mode{padding:9px 10px;font-size:9px}}
+@media(prefers-reduced-motion:reduce){.calc-keys button{animation:none!important;transition:none!important}}
+
+
+/* Focused unit and laboratory conversion workspace */
+.unit-category-grid .category-pill[data-category="currency"]{background:linear-gradient(145deg,rgba(69,77,91,.58),rgba(28,31,39,.8))}
+
+.unit-category-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:0 0 22px}
+.unit-category-grid .category-pill{min-height:112px;border-radius:20px;display:flex;flex-direction:column;justify-content:center;gap:11px;font-size:12px;background:linear-gradient(145deg,rgba(61,66,80,.55),rgba(25,29,38,.76));border-color:rgba(210,218,240,.1);box-shadow:inset 0 1px 0 #ffffff12,0 8px 20px #0002}
+.unit-category-grid .category-pill svg{width:29px;height:29px}
+.unit-category-grid .category-pill.active{background:linear-gradient(145deg,rgba(108,88,214,.42),rgba(42,70,124,.48));border-color:rgba(166,151,255,.62);box-shadow:inset 0 1px 0 #ffffff28,0 0 22px #7868ff22}
+.unit-convert-card{max-width:850px;margin:0 auto;padding:20px;border:1px solid rgba(184,197,255,.14);border-radius:23px;background:rgba(5,10,23,.34)}
+.unit-pair-grid{display:grid;grid-template-columns:minmax(0,1fr) 42px minmax(0,1fr);align-items:end;gap:12px;margin-top:16px}
+.unit-picker-trigger{width:100%;min-height:54px;display:flex;align-items:center;justify-content:space-between;gap:10px;padding:12px 14px;border:1px solid rgba(180,194,245,.2);border-radius:15px;background:rgba(7,12,26,.58);color:#f3f5ff;text-align:left;font-size:12px;cursor:pointer}
+.unit-picker-trigger span{color:#a99aff;font-size:19px;flex:none}
+.unit-swap-round{width:42px;height:42px;border:1px solid rgba(166,151,255,.38);border-radius:50%;background:linear-gradient(145deg,#6254c866,#3477c866);color:#fff;font-size:22px;cursor:pointer;box-shadow:inset 0 1px 0 #ffffff30,0 0 17px #7666ff20}
+.number-base-row{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:16px}
+.unit-picker-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;background:rgba(0,0,0,.62);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px)}
+.unit-picker-sheet{width:min(760px,100%);max-height:min(88svh,900px);display:flex;flex-direction:column;overflow:hidden;border:1px solid rgba(190,203,255,.13);border-bottom:0;border-radius:28px 28px 0 0;background:#1e1e1f;box-shadow:0 -18px 65px #0008;padding-bottom:env(safe-area-inset-bottom)}
+.unit-picker-header{height:72px;flex:none;display:grid;grid-template-columns:88px 1fr 88px;align-items:center;padding:0 18px;border-bottom:1px solid #ffffff08}
+.unit-picker-header h3{margin:0;text-align:center;font-size:17px;font-weight:600;color:#f4f4f4}
+.unit-picker-header button{min-width:66px;min-height:52px;padding:10px 14px;border:1px solid rgba(190,200,230,.3);border-radius:999px;background:rgba(255,255,255,.09);color:#f2f3fa;font-size:16px;text-align:center;cursor:pointer;box-shadow:inset 0 1px rgba(255,255,255,.18)}
+.unit-picker-search-wrap{padding:12px 18px 5px;flex:none}
+.unit-picker-search-wrap input{width:100%;height:42px;border:1px solid #ffffff16;border-radius:12px;padding:0 13px;background:#29292b;color:#fff;outline:none}
+.unit-picker-search-wrap input::placeholder{color:#8d8d91}
+.unit-picker-list{overflow:auto;overscroll-behavior:contain;padding:0 18px 18px}
+.unit-picker-group{padding:18px 8px 9px;color:#85858a;font-size:11px}
+.unit-picker-option{width:100%;min-height:54px;display:flex;align-items:center;padding:12px 8px;border:0;border-bottom:1px solid rgba(255,255,255,.11);background:transparent;color:#eee;text-align:left;font-size:14px;cursor:pointer}
+.unit-picker-option:hover,.unit-picker-option:focus-visible{background:#ffffff0b}
+.unit-picker-option.selected{color:#ffad64}
+.lab-mode-pills{margin:0 0 20px}
+.lab-mode-pills .category-pill{min-height:42px;padding:10px 17px;border-radius:24px}
+.lab-fields{margin-bottom:16px}
+#lab-mw-options{margin-top:12px}
+@media(max-width:580px){
+ .unit-category-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+ .unit-category-grid .category-pill{min-height:94px;padding:10px 5px;font-size:10px;border-radius:16px}
+ .unit-category-grid .category-pill svg{width:25px;height:25px}
+ .unit-convert-card{padding:13px;border-radius:20px}
+ .unit-pair-grid{grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);gap:6px}
+ .unit-picker-trigger{min-height:50px;padding:10px 8px;font-size:10px}
+ .unit-swap-round{width:34px;height:34px;font-size:18px}
+ .unit-picker-sheet{max-height:90svh;border-radius:24px 24px 0 0}
+ .unit-picker-header{height:64px;padding:0 13px;grid-template-columns:70px 1fr 70px}
+ .unit-picker-header h3{font-size:15px}
+ .unit-picker-list{padding:0 14px 16px}
+ .unit-picker-option{min-height:49px;font-size:13px}
+ .lab-mode-pills{display:grid;grid-template-columns:1fr 1fr}
+ .lab-mode-pills .category-pill{padding:10px 7px;font-size:10px}
+}
+@media(max-width:360px){.unit-category-grid{gap:6px}.unit-category-grid .category-pill{min-height:86px;font-size:9px}.unit-pair-grid{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);gap:4px}.unit-swap-round{width:30px;height:30px}}
+
+
+/* Compact unit-category tiles and reliable touch feedback */
+.unit-category-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-bottom:18px}
+.unit-category-grid .category-pill{min-height:72px;height:72px;padding:8px 5px;border-radius:15px;gap:5px;font-size:10px;line-height:1.2;justify-content:center;align-items:center;transform:none!important;transition:background .18s,border-color .18s,box-shadow .18s,filter .18s;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.unit-category-grid .category-pill svg{width:22px;height:22px}
+.unit-category-grid .category-pill.active{transform:none!important;filter:none}
+.unit-category-grid .category-pill:active{transform:scale(.95)!important;filter:brightness(1.12)}
+.unit-category-grid .category-pill:focus:not(:focus-visible){outline:none}
+.unit-category-grid .category-pill:focus-visible{outline:2px solid #a99aff;outline-offset:2px}
+.unit-pair-grid{grid-template-columns:minmax(0,1fr) 34px minmax(0,1fr);align-items:center;gap:9px}
+.unit-swap-round{width:32px;height:32px;min-width:32px;padding:0;display:grid;place-items:center;align-self:center;margin-top:17px;transform:translateY(-5px);border-radius:50%;font-size:17px;line-height:1;transition:transform .16s ease,filter .16s ease,box-shadow .16s ease;-webkit-tap-highlight-color:transparent;touch-action:manipulation}
+.unit-swap-round:active{transform:translateY(-5px) scale(.9);filter:brightness(1.15)}
+.unit-swap-round:focus:not(:focus-visible){outline:none}
+@media(max-width:580px){
+ .unit-category-grid{gap:7px}
+ .unit-category-grid .category-pill{height:68px;min-height:68px;padding:7px 3px;border-radius:13px;font-size:9px;gap:4px}
+ .unit-category-grid .category-pill svg{width:20px;height:20px}
+ .unit-pair-grid{grid-template-columns:minmax(0,1fr) 30px minmax(0,1fr);gap:5px}
+ .unit-swap-round{width:29px;height:29px;min-width:29px;margin-top:16px;transform:translateY(-6px);font-size:16px}
+ .unit-swap-round:active{transform:translateY(-6px) scale(.9)}
+}
+
+
+/* Compact, bounded unit picker on phones and desktop */
+.unit-category-grid{gap:7px;margin-bottom:14px}
+.unit-category-grid .category-pill{height:58px;min-height:58px;padding:6px 4px;gap:3px;font-size:9px}
+.unit-category-grid .category-pill svg{width:18px;height:18px}
+.unit-picker-overlay{align-items:flex-end;padding:12px}
+.unit-picker-sheet{width:min(620px,100%);max-height:min(64dvh,560px);border-radius:24px; border:1px solid rgba(190,203,255,.2);padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.unit-picker-header{height:54px;grid-template-columns:40px 1fr 40px;padding:0 12px}
+.unit-picker-header h3{font-size:15px}
+.unit-picker-header .unit-picker-close{width:34px;height:34px;border-radius:50%;display:grid;place-items:center;text-align:center;background:#ffffff0b;color:#f1f3ff;font-size:17px}
+.unit-picker-search-wrap{padding:8px 14px 5px}
+.unit-picker-search-wrap input{height:40px}
+.unit-picker-list{padding:0 14px 12px}
+.unit-picker-group{padding:10px 7px 5px}
+.unit-picker-option{min-height:40px;padding:8px 7px;font-size:13px}
+.tool-header .local-clock{display:flex;min-width:72px}
+.tool-header .local-clock span{font-size:12px}
+.tool-header .local-clock small{font-size:7px}
+@media(min-width:700px){
+ .unit-picker-overlay{align-items:center}
+ .unit-picker-sheet{max-height:min(72vh,620px)}
+}
+@media(max-width:580px){
+ .unit-category-grid .category-pill{height:54px;min-height:54px;padding:5px 2px;font-size:8px}
+ .unit-category-grid .category-pill svg{width:17px;height:17px}
+ .unit-picker-sheet{max-height:min(62dvh,500px);border-radius:22px}
+ .unit-picker-option{min-height:38px;font-size:12px}
+ .tool-header{gap:7px;padding-left:5vw;padding-right:5vw}
+ .tool-header .wordmark{font-size:24px}
+ .tool-header .local-clock{min-width:66px}
+ .tool-header .local-clock span{font-size:11px}
+ .tool-header .local-clock small{font-size:6px}
+ .tool-header .header-cta{font-size:10px;padding:8px 9px;white-space:nowrap}
+}
+
+/* Final responsive sizing for unit categories and the unit picker. */
+.unit-category-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:9px;margin-bottom:16px}
+.unit-category-grid .category-pill{height:62px;min-height:62px;padding:6px 5px;gap:4px;border-radius:14px;font-size:9px;line-height:1.15}
+.unit-category-grid .category-pill svg{width:18px;height:18px}
+.unit-picker-overlay{align-items:flex-end;padding:12px}
+.unit-picker-sheet{width:min(560px,calc(100vw - 24px));max-height:min(56dvh,500px);min-height:0;border-radius:22px;border:1px solid rgba(190,203,255,.22);padding-bottom:max(8px,env(safe-area-inset-bottom))}
+.unit-picker-header{height:52px;min-height:52px;grid-template-columns:38px 1fr 38px;padding:0 12px;flex:none}
+.unit-picker-header .unit-picker-close{width:34px;height:34px;display:grid;place-items:center;border:1px solid rgba(255,255,255,.12);border-radius:50%;background:rgba(255,255,255,.08);color:#fff;font-size:16px;cursor:pointer}
+.unit-picker-search-wrap{padding:8px 12px 5px;flex:none}
+.unit-picker-search-wrap input{height:38px}
+.unit-picker-list{min-height:0;flex:1 1 auto;overflow-y:auto;overscroll-behavior:contain;padding:0 12px 10px}
+.unit-picker-group{padding:8px 7px 4px}
+.unit-picker-option{min-height:36px;padding:7px;font-size:12px}
+@media(max-width:760px){.unit-category-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:7px}.unit-category-grid .category-pill{height:49px;min-height:49px;padding:5px 3px;font-size:8px;gap:3px}.unit-category-grid .category-pill svg{width:16px;height:16px}.unit-picker-overlay{align-items:flex-end;padding:8px}.unit-picker-sheet{width:100%;max-height:min(48dvh,410px);border-radius:20px}.unit-picker-header{height:48px;min-height:48px}.unit-picker-search-wrap{padding:7px 10px 4px}.unit-picker-search-wrap input{height:36px}.unit-picker-option{min-height:34px;font-size:12px}}
+@media(max-width:380px){.unit-category-grid{gap:5px}.unit-category-grid .category-pill{height:46px;min-height:46px;font-size:7.5px}.unit-category-grid .category-pill svg{width:15px;height:15px}.unit-picker-sheet{max-height:min(46dvh,370px)}}
+@media(min-width:761px){.unit-picker-overlay{align-items:center}.unit-picker-sheet{max-height:min(64vh,560px)}}
+.tool-header .local-clock{display:flex!important;flex:0 0 auto}
+@media(max-width:760px){.tool-wrap{width:min(94vw,760px);margin:24px auto 120px}.tool-header{gap:8px}.tool-header .local-clock{min-width:72px;margin-left:auto;margin-right:clamp(4px,2vw,14px)}.tool-header .local-clock small{font-size:7px}.tool-header .header-cta{flex:0 0 auto}}
+
+/* Clinical calculation workspace */
+.lab-calc-select{max-width:620px;margin-bottom:14px}.lab-calc-select .glass-select{border-radius:16px;background:linear-gradient(145deg,rgba(255,255,255,.13),rgba(255,255,255,.035));border:1px solid rgba(177,190,240,.32);backdrop-filter:blur(22px);box-shadow:inset 0 1px rgba(255,255,255,.18),0 12px 30px rgba(0,0,0,.16)}
+.lab-calc-description{max-width:850px;margin:0 0 16px;line-height:1.7}
+.virtual-keypad-toggle{position:fixed;right:16px;bottom:calc(94px + env(safe-area-inset-bottom));z-index:75;border:1px solid rgba(165,181,235,.3);border-radius:999px;padding:11px 15px;background:rgba(25,34,58,.9);color:#eef1ff;backdrop-filter:blur(20px);box-shadow:0 8px 28px #0005;font:12px var(--sans)}.virtual-keypad-toggle[aria-pressed="true"]{background:linear-gradient(120deg,#6957d9,#347fca)}.lab-calc-fields{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;max-width:900px}
+.lab-calc-fields .field{min-width:0}
+.lab-calc-result{margin-top:22px}
+.lab-calc-disclaimer{font-size:10px;line-height:1.7;color:#8e9bb7;border:1px solid rgba(190,203,255,.12);border-radius:13px;padding:13px 15px;margin-top:14px}.lab-calc-sources{font-size:10px;line-height:1.8;color:#8996b2;margin-top:10px}.lab-calc-sources a{color:#b9c3ff;text-decoration:underline;text-underline-offset:3px}
+.lab-mode-pills{align-items:center}
+@media(max-width:580px){.lab-calc-fields{grid-template-columns:minmax(0,1fr)}.lab-calc-select{max-width:none}.lab-calc-description{font-size:11px}.lab-calc-disclaimer{font-size:9px}}
+
+/* Calculator navigation: compact header-style menu on desktop, icon cards on phones. */
+.glass-navigation{display:flex;align-items:center;justify-content:center;gap:7px;padding:7px;border-radius:22px;background:rgba(13,20,38,.46);border:1px solid rgba(180,194,245,.14);box-shadow:inset 0 1px 0 rgba(255,255,255,.08)}
+.glass-navigation .nav-card{position:relative;min-height:48px;flex:1 1 0;padding:11px 13px;border-radius:15px;display:flex;flex-direction:row;align-items:center;justify-content:center;gap:8px;white-space:nowrap;background:transparent;border:1px solid transparent;box-shadow:none;font-size:11px}
+.glass-navigation .nav-card:after{display:none}
+.glass-navigation .nav-card svg{width:19px;height:19px;flex:none}
+.glass-navigation .nav-card span{font-size:11px}
+.glass-navigation .nav-card.active{background:linear-gradient(120deg,rgba(111,93,230,.35),rgba(43,103,166,.28));border-color:rgba(174,159,255,.4);box-shadow:inset 0 1px 0 #ffffff25,0 5px 18px #05081455;color:#fff}
+body[data-theme="day"] .glass-navigation{background:rgba(255,255,255,.52);border-color:rgba(85,108,165,.2)}
+body[data-theme="day"] .glass-navigation .nav-card{color:#425371}
+body[data-theme="day"] .glass-navigation .nav-card.active{background:linear-gradient(120deg,rgba(112,116,229,.2),rgba(78,153,211,.16));color:#263653;border-color:rgba(101,120,205,.32)}
+/* Keep the unit selector as a floating card, not a full-screen dimmer. */
+.unit-picker-overlay{position:fixed;inset:0;z-index:100;display:flex;align-items:flex-end;justify-content:center;padding:0 14px calc(104px + env(safe-area-inset-bottom));background:transparent;backdrop-filter:none;-webkit-backdrop-filter:none;pointer-events:none}
+.unit-picker-sheet{width:min(620px,100%);max-height:min(58svh,560px);border:1px solid rgba(190,203,255,.18);border-radius:24px;background:#1e1e1f;box-shadow:0 18px 55px #0009;padding-bottom:8px;pointer-events:auto}
+.unit-picker-header{height:62px;grid-template-columns:52px 1fr 52px;padding:0 12px}
+.unit-picker-header button{width:38px;height:38px;display:grid;place-items:center;border:1px solid #ffffff22;border-radius:50%;background:#ffffff0b;color:#f4f4f4;text-align:center;font-size:18px}
+.unit-picker-list{min-height:0;overscroll-behavior:contain}
+#lab-picker-overlay .unit-picker-sheet{max-height:min(48svh,460px)}
+@media(min-width:761px){
+ .tool-wrap{margin-top:26px}
+ .glass-navigation{justify-content:flex-start;gap:5px}
+ .glass-navigation .nav-card{flex:0 1 auto;padding:11px 15px}
+ .math-layout{max-width:520px;padding:16px 14px 12px}
+ .calc-keys{grid-template-columns:repeat(4,minmax(0,70px));justify-content:center;gap:9px}
+ .calc-keys.scientific{grid-template-columns:repeat(5,minmax(0,66px));gap:8px}
+ .calc-keys button{max-width:70px;font-size:20px}
+ .calc-keys.scientific button{max-width:66px;font-size:17px}
+ .calc-display{min-height:68px;padding:12px 10px 4px;font-size:clamp(26px,3vw,38px)}
+ .calc-expression{margin-bottom:12px}
+}
+@media(max-width:760px){
+ .glass-navigation{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;padding:0;background:transparent;border:0;box-shadow:none}
+ .glass-navigation .nav-card{min-height:90px;flex:initial;padding:12px 5px;border-radius:18px;display:flex;flex-direction:column;gap:7px;white-space:normal}
+ .glass-navigation .nav-card svg{width:25px;height:25px}
+ .glass-navigation .nav-card span{font-size:9px}
+ .unit-picker-overlay{align-items:flex-end;padding-bottom:calc(105px + env(safe-area-inset-bottom))}
+ .unit-picker-sheet{max-height:56svh;border-radius:23px}
+ .unit-picker-header{height:58px}
+}
+@media(max-width:580px){.math-layout{max-width:100%}.calc-keys{grid-template-columns:repeat(4,minmax(0,1fr))}.calc-keys.scientific{grid-template-columns:repeat(5,minmax(0,1fr))}.calc-keys button{max-width:none}}
+/* Reusable on-screen number pad for every numeric converter and lab field. */
+.virtual-keypad{position:fixed;z-index:120;right:18px;bottom:112px;width:min(310px,calc(100vw - 28px));padding:12px;border:1px solid rgba(190,203,255,.22);border-radius:20px;background:linear-gradient(145deg,rgba(29,39,65,.98),rgba(9,15,29,.98));box-shadow:0 18px 50px #0009,inset 0 1px 0 #ffffff20;backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px)}
+.virtual-keypad.hidden{display:none}
+.virtual-keypad-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:9px;color:#9eacc9;font:9px var(--mono);letter-spacing:1.4px}
+.virtual-keypad-head button{border:0;background:transparent;color:#c7cfff;font-size:11px}
+.virtual-keypad-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+.virtual-keypad-grid button{min-height:42px;border:1px solid #b9c7ff20;border-radius:11px;background:linear-gradient(145deg,#394666,#202b43);color:#f4f6ff;font-weight:700;font-size:16px}
+.virtual-keypad-grid .vk-clear{font-size:12px;color:#ffb4bd}.virtual-keypad-grid .vk-done{font-size:12px;background:linear-gradient(110deg,#6556d8,#3d83d2)}
+body[data-theme="day"] .virtual-keypad{background:linear-gradient(145deg,rgba(250,252,255,.98),rgba(220,231,249,.98));border-color:rgba(85,108,165,.25)}
+body[data-theme="day"] .virtual-keypad-head,body[data-theme="day"] .virtual-keypad-head button{color:#435575}
+body[data-theme="day"] .virtual-keypad-grid button{background:linear-gradient(145deg,#fff,#dce6f7);color:#263653;border-color:rgba(85,108,165,.2)}
+body[data-theme="day"] .virtual-keypad-grid .vk-done{background:linear-gradient(110deg,#6c78db,#4f8ec6);color:#fff}
+
+/* Compact calculator shortcuts. Math + Scientific remain one tool with the in-panel mode switch. */
+@media(max-width:760px){
+ .glass-navigation{grid-template-columns:repeat(2,minmax(0,1fr));gap:7px}
+ .glass-navigation .nav-card{min-height:62px;padding:7px 9px;border-radius:14px;gap:8px;flex-direction:row}
+ .glass-navigation .nav-card svg{width:20px;height:20px}
+ .glass-navigation .nav-card span{font-size:8px;line-height:1.2;text-align:left}
+}
+@media(max-width:390px){.glass-navigation{gap:6px}.glass-navigation .nav-card{min-height:58px;padding:6px 7px}.glass-navigation .nav-card svg{width:18px;height:18px}.glass-navigation .nav-card span{font-size:7.5px}}
+/* Spring motion for every segmented/capsule selection in the calculator UI. */
+.calc-mode,.category-pill,.unit-swap-round,.currency-swap,.glass-navigation .nav-card{
+ transition:transform .58s cubic-bezier(.18,.92,.22,1.22),background .3s,border-color .3s,box-shadow .3s,color .25s!important;
+}
+.calc-mode.active,.category-pill.active,.glass-navigation .nav-card.active{animation:capsuleSpring .58s cubic-bezier(.18,.92,.22,1.22) both}
+@keyframes capsuleSpring{0%{transform:scale(.94)}58%{transform:scale(1.055)}78%{transform:scale(.985)}100%{transform:scale(1)}}
+.calc-mode:active,.category-pill:active,.glass-navigation .nav-card:active{transform:scale(.94)!important}
+@media(prefers-reduced-motion:reduce){.calc-mode,.category-pill,.glass-navigation .nav-card{transition:none!important}.calc-mode.active,.category-pill.active,.glass-navigation .nav-card.active{animation:none!important}}
+.lab-concentration-switch{display:flex;gap:8px;margin:0 0 16px;padding:5px;width:max-content;max-width:100%;border:1px solid rgba(174,190,245,.18);border-radius:999px;background:rgba(9,16,34,.42);backdrop-filter:blur(18px);-webkit-backdrop-filter:blur(18px)}.lab-concentration-switch .category-pill{min-height:34px;padding:8px 14px;border-radius:999px;font-size:10px;white-space:nowrap}.lab-concentration-switch .category-pill.active{background:linear-gradient(120deg,rgba(112,91,224,.58),rgba(55,122,190,.48));border-color:rgba(174,165,255,.55);box-shadow:inset 0 1px 0 #ffffff30,0 5px 18px #5c65d52b}@media(max-width:420px){.lab-concentration-switch{width:100%}.lab-concentration-switch .category-pill{flex:1;padding:8px 7px;font-size:9px}}
+</style>
+
+<style>
+/* Calculator buttons enlarge only during a real pointer press, never from sticky mobile hover. */
+.nav-card.active{animation:none!important;}
+.nav-card:focus:not(:focus-visible),.calc-keys button:focus:not(:focus-visible){transform:none!important;}
+.calc-keys button.is-pressed{transform:scale(1.09)!important;translate:0 0!important;animation:none!important;filter:brightness(1.28)!important;box-shadow:inset 0 2px 4px #ffffff55,0 12px 28px #0008,0 0 22px #8b83ff44!important;z-index:3;}
+.nav-card.is-pressed,.calc-mode.is-pressed,.glass-button.is-pressed{transform:scale(1.045)!important;filter:brightness(1.2)!important;z-index:3;}
+@media(hover:hover) and (pointer:fine){.calc-keys button:hover{transform:translateY(-3px) scale(1.025);}}
+@media(hover:none),(pointer:coarse){.calc-keys button:hover{transform:none!important;filter:none!important;border-color:rgba(220,228,255,.19)!important;box-shadow:inset 0 2px 3px rgba(255,255,255,.22),inset 0 -4px 9px rgba(0,0,0,.28),0 7px 17px rgba(0,0,0,.34)!important;}
+.nav-card:hover:not(.active){transform:none!important;border-color:var(--glass-edge)!important;box-shadow:inset 0 1px 0 #ffffff24,0 12px 30px #05081455!important;}
+.nav-card:hover:after{animation:none!important;}
+.glass-button:hover{transform:none!important;filter:none!important;}}
+@media(prefers-reduced-motion:reduce){.calc-keys button.is-pressed,.nav-card.is-pressed{transition:none!important;}}
+
+/* Calculator inherits the shared Auto / Day / Night theme instead of staying permanently dark. */
+body[data-theme="day"]{--glass-bg:rgba(255,255,255,.62);--glass-edge:rgba(85,108,165,.2);--glass-highlight:rgba(255,255,255,.86);--soft:#52617a;background:radial-gradient(ellipse at 12% 12%,rgba(124,139,238,.16),transparent 34%),radial-gradient(ellipse at 88% 28%,rgba(85,160,218,.15),transparent 34%),linear-gradient(145deg,#edf2fb 0%,#e3ebf9 48%,#f3f6fc 100%)!important;color:#172033;}
+body[data-theme="day"]:before{background:#8d9ce8;opacity:.14}body[data-theme="day"]:after{background:#78b7db;opacity:.16}
+body[data-theme="day"] .tool-kicker{color:#6474c5}body[data-theme="day"] .tool-hero h1 span{background:linear-gradient(100deg,#24385f 10%,#6975c9 55%,#398db8);background-clip:text;color:transparent}body[data-theme="day"] .tool-hero p{color:#5c6c87}
+body[data-theme="day"] .glass,body[data-theme="day"] .glass-card,body[data-theme="day"] .tool-panel,body[data-theme="day"] .currency-card,body[data-theme="day"] .unit-convert-card,body[data-theme="day"] .lab-calculations,body[data-theme="day"] .unit-picker-sheet,body[data-theme="day"] .bottom-glass-nav{background:linear-gradient(145deg,rgba(255,255,255,.78),rgba(220,231,249,.66))!important;border-color:rgba(83,106,164,.2)!important;box-shadow:inset 0 1px 0 rgba(255,255,255,.92),0 18px 48px rgba(55,76,125,.12)!important;color:#1c2a45;}
+body[data-theme="day"] .glass:before{background:linear-gradient(125deg,rgba(255,255,255,.72),transparent 35%,transparent 72%,rgba(105,125,220,.08))}
+body[data-theme="day"] .nav-card{color:#344665}body[data-theme="day"] .nav-card svg{stroke:#6679c9}body[data-theme="day"] .nav-card.active{background:linear-gradient(120deg,rgba(112,116,229,.18),rgba(78,153,211,.14));border-color:rgba(101,120,205,.32)}
+body[data-theme="day"] .panel-heading h2,body[data-theme="day"] .field label,body[data-theme="day"] .result-value,body[data-theme="day"] .currency-code,body[data-theme="day"] .currency-name,body[data-theme="day"] .category-pill,body[data-theme="day"] .calc-expression{color:#263653}
+body[data-theme="day"] .panel-heading p,body[data-theme="day"] .panel-tag,body[data-theme="day"] .status-line,body[data-theme="day"] .result-label,body[data-theme="day"] .result-meta,body[data-theme="day"] .calc-hint,body[data-theme="day"] .currency-rate,body[data-theme="day"] .lab-calc-disclaimer,body[data-theme="day"] .lab-calc-sources{color:#65748f}
+body[data-theme="day"] .glass-input,body[data-theme="day"] .glass-select,body[data-theme="day"] .currency-amount,body[data-theme="day"] .unit-picker-search-wrap input{background:rgba(255,255,255,.78);border-color:rgba(86,108,164,.22);color:#1b2b49}
+body[data-theme="day"] .glass-input::placeholder,body[data-theme="day"] .unit-picker-search-wrap input::placeholder{color:#8491a8}
+body[data-theme="day"] .calc-display{background:linear-gradient(145deg,rgba(255,255,255,.82),rgba(218,230,248,.7));border-color:rgba(84,108,166,.2);color:#1b2b49}
+body[data-theme="day"] .calc-keys button{background:linear-gradient(145deg,rgba(255,255,255,.9),rgba(218,229,247,.82));border-color:rgba(89,111,166,.22);color:#263653;box-shadow:inset 0 1px 0 rgba(255,255,255,.95),0 5px 13px rgba(59,78,124,.1)}
+body[data-theme="day"] .calc-keys button.op,body[data-theme="day"] .calc-keys button.utility{color:#5268bd;background:linear-gradient(145deg,rgba(225,231,255,.95),rgba(202,216,247,.84))}
+body[data-theme="day"] .calc-keys button.equal,body[data-theme="day"] .glass-button.primary{background:linear-gradient(110deg,#6c78db,#4f8ec6);color:white}
+body[data-theme="day"] .category-pill{background:rgba(255,255,255,.65);border-color:rgba(89,111,166,.18)}body[data-theme="day"] .category-pill.active{background:rgba(111,126,222,.18);border-color:rgba(99,117,204,.32)}
+body[data-theme="day"] .bottom-glass-nav a,body[data-theme="day"] .bottom-glass-nav button{color:#52617a}body[data-theme="day"] .bottom-glass-nav .active{color:#263653;background:rgba(111,126,222,.17)}
+body[data-theme="day"] .lab-calc-sources a{color:#5369bb}
+</style>
+</head>
+<body>
+<script>
+(function(){
+ var key='lx-theme-mode',mode='auto';
+ try{mode=localStorage.getItem(key)||'auto'}catch(e){}
+ function autoTheme(){var h=new Date().getHours();return h>=7&&h<19?'day':'night'}
+ function apply(){var theme=mode==='day'||mode==='night'?mode:autoTheme();document.documentElement.dataset.theme=theme;if(document.body)document.body.dataset.theme=theme;document.documentElement.style.colorScheme=theme;var meta=document.querySelector('meta[name="theme-color"]');if(meta)meta.setAttribute('content',theme==='day'?'#edf2fb':'#080b12');return theme}
+ window.SiteTheme={getMode:function(){return mode},getTheme:function(){return mode==='day'||mode==='night'?mode:autoTheme()},setMode:function(next){mode=next==='day'||next==='night'?next:'auto';try{localStorage.setItem(key,mode)}catch(e){}apply();window.dispatchEvent(new CustomEvent('site-theme-change',{detail:{mode:mode,theme:document.body.dataset.theme}}))},refresh:apply};
+ apply();window.setInterval(function(){if(mode==='auto')apply()},60000);
+ window.addEventListener('storage',function(e){if(e.key===key){mode=e.newValue||'auto';apply()}});
+})();
+</script>
+<div class="ambient" aria-hidden="true"></div>
+<svg aria-hidden="true" width="0" height="0" style="position:absolute;overflow:hidden">
+<symbol id="i-math" viewBox="0 0 24 24"><rect x="4" y="2.5" width="16" height="19" rx="3"/><path d="M8 6.5h8M8 11h2m4 0h2M8 15h2m4 0h2M8 18.5h2m4 0h2"/></symbol>
+<symbol id="i-currency" viewBox="0 0 24 24"><ellipse cx="9" cy="7" rx="6" ry="3"/><path d="M3 7v4c0 1.7 2.7 3 6 3 1.3 0 2.5-.2 3.5-.6M3 11v4c0 1.7 2.7 3 6 3 1.1 0 2.1-.2 3-.5"/><ellipse cx="16" cy="15" rx="5" ry="2.5"/><path d="M11 15v3.5c0 1.4 2.2 2.5 5 2.5s5-1.1 5-2.5V15"/></symbol>
+<symbol id="i-cube" viewBox="0 0 24 24"><path d="m12 2.8 8.5 4.6v9.2L12 21.2l-8.5-4.6V7.4L12 2.8Z"/><path d="m3.8 7.6 8.2 4.5 8.2-4.5M12 12.1v8.7M7.7 5.1l8.5 4.7v4.1"/></symbol>
+<symbol id="i-flask" viewBox="0 0 24 24"><path d="M9 3h6m-5 0v6l-6.1 9.3A2 2 0 0 0 5.6 21h12.8a2 2 0 0 0 1.7-2.7L14 9V3"/><path d="M7.2 15h9.6M9 12h6"/></symbol>
+<symbol id="i-game" viewBox="0 0 24 24"><path d="M6.5 8h11a4 4 0 0 1 3.8 5.2l-1.1 3.4a2 2 0 0 1-3.2.9l-2.2-1.8H9.2L7 17.5a2 2 0 0 1-3.2-.9l-1.1-3.4A4 4 0 0 1 6.5 8Z"/><path d="M7 10.5v5m-2.5-2.5h5m6-1h.01M18 14h.01"/></symbol>
+<symbol id="i-tools" viewBox="0 0 24 24"><path d="m12 3 9 5-9 5-9-5 9-5Z"/><path d="m3 12 9 5 9-5M3 16l9 5 9-5"/></symbol>
+<symbol id="i-education" viewBox="0 0 24 24"><path d="m2 9 10-5 10 5-10 5L2 9Z"/><path d="M6 11v5c3.8 3 8.2 3 12 0v-5M22 9v6"/></symbol>
+<symbol id="i-more" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></symbol>
+<symbol id="i-length" viewBox="0 0 24 24"><path d="M3 12h18m-5-5 5 5-5 5M8 7l-5 5 5 5"/></symbol>
+<symbol id="i-area" viewBox="0 0 24 24"><rect x="3" y="3" width="8" height="8" rx="1"/><rect x="13" y="3" width="8" height="8" rx="1"/><rect x="3" y="13" width="8" height="8" rx="1"/><rect x="13" y="13" width="8" height="8" rx="1"/></symbol>
+<symbol id="i-volume" viewBox="0 0 24 24"><path d="m12 2.8 8.5 4.6v9.2L12 21.2l-8.5-4.6V7.4L12 2.8Z"/><path d="m3.8 7.6 8.2 4.5 8.2-4.5M12 12.1v8.7"/></symbol>
+<symbol id="i-weight" viewBox="0 0 24 24"><path d="M7 7h10l3 14H4L7 7Z"/><path d="M9 7a3 3 0 0 1 6 0m-3 3 2 3"/></symbol>
+<symbol id="i-temperature" viewBox="0 0 24 24"><path d="M14 14.8V5a3 3 0 0 0-6 0v9.8a5 5 0 1 0 6 0Z"/><path d="M11 12v6m0-10v1"/></symbol>
+<symbol id="i-speed" viewBox="0 0 24 24"><path d="M4 18a9 9 0 1 1 16 0"/><path d="m12 13 5-5m-9 10h8"/></symbol>
+<symbol id="i-pressure" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="m12 12 4-4m-4 4v4"/></symbol>
+<symbol id="i-power" viewBox="0 0 24 24"><path d="m13 2-9 12h7l-1 8 10-13h-7l0-7Z"/></symbol>
+<symbol id="i-number" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="16" rx="3"/><path d="M7 9h3m-3 5h3m4-5h3m-3 5h3"/></symbol>
+<symbol id="i-energy" viewBox="0 0 24 24"><path d="M13 2 4 13h7l-1 9 10-13h-7l0-7Z"/></symbol>
+<symbol id="i-time" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+<symbol id="i-data" viewBox="0 0 24 24"><ellipse cx="12" cy="5" rx="8" ry="3"/><path d="M4 5v14c0 1.7 3.6 3 8 3s8-1.3 8-3V5M4 12c0 1.7 3.6 3 8 3s8-1.3 8-3"/></symbol>
+<symbol id="i-swap" viewBox="0 0 24 24"><path d="M4 7h15m-4-4 4 4-4 4M20 17H5m4-4-4 4 4 4"/></symbol>
+<symbol id="i-home" viewBox="0 0 24 24"><path d="m3 10 9-7 9 7v10a1 1 0 0 1-1 1h-6v-7h-4v7H4a1 1 0 0 1-1-1V10Z"/></symbol>
+<symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/></symbol>
+<symbol id="i-file" viewBox="0 0 24 24"><path d="M6 3h8l4 4v14H6zM14 3v5h5M9 13h6m-6 4h6"/></symbol>
+<symbol id="i-mail" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="14" rx="2"/><path d="m3 7 9 6 9-6"/></symbol>
+</svg>
+<header class="site-header tool-header"><a class="wordmark" href="/" data-scroll-target="home">luminica<span>.</span></a><div class="local-clock tool-header-clock" aria-label="Local date and time"><span id="visitor-time">--:--</span><small id="visitor-date">Loading time…</small></div><a class="header-cta" href="/" data-scroll-target="contact">Let's talk <span>↗</span></a></header>
+<main class="tool-wrap">
+<section class="tool-hero"><span class="tool-kicker">✦ PRECISION TOOLKIT / 2026</span><h1>Your tools,<br><span>beautifully calculated.</span></h1><p>A premium workspace for everyday mathematics, currency exchange, engineering conversions and clinical laboratory calculations.</p></section>
+<nav class="glass-navigation" aria-label="Calculator tools">
+<button class="nav-card glass glass-card active" data-panel="math" aria-pressed="true"><svg><use href="#i-math"/></svg><span>Math &amp; Scientific Calculator</span></button>
+<button class="nav-card glass glass-card" data-panel="currency" aria-pressed="false"><svg><use href="#i-currency"/></svg><span>Currency Converter</span></button>
+<button class="nav-card glass glass-card" data-panel="units" aria-pressed="false"><svg><use href="#i-cube"/></svg><span>Unit Converter</span></button>
+<button class="nav-card glass glass-card" data-panel="lab" aria-pressed="false"><svg><use href="#i-flask"/></svg><span>Lab Calculator</span></button>
+</nav>
+<section class="tool-panel glass glass-card active" id="math">
+<div class="panel-heading"><div><h2>Math calculator</h2><p>Switch between a clean everyday keypad and a full scientific calculator.</p></div><span class="panel-tag">01 / MATHEMATICS</span></div>
+<div class="calc-mode-switch" role="tablist" aria-label="Calculator mode">
+<button class="calc-mode active" type="button" data-calc-mode="basic" role="tab" aria-selected="true">Math Calculator</button>
+<button class="calc-mode" type="button" data-calc-mode="scientific" role="tab" aria-selected="false">Scientific Calculator</button>
+</div>
+<div class="math-layout" id="math-layout">
+<div class="calc-display" id="calc-display" aria-live="polite">0</div>
+<div class="calc-expression" id="calc-expression">Ready</div>
+<div class="calc-keys basic" id="calc-keys" aria-label="Calculator keypad"></div>
+<div class="calc-hint" id="calc-hint">Keyboard supported · Enter to calculate · Esc to clear</div>
+</div>
+</section>
+<section class="tool-panel glass glass-card" id="currency">
+<div class="panel-heading"><div><h2>Currency converter</h2><p>Convert using the latest available Frankfurter reference rates. These are published reference rates, not live trading quotes.</p></div><span class="panel-tag">02 / EXCHANGE</span></div>
+<div class="currency-shell">
+<div class="currency-topline"><span class="live-dot" id="currency-live-dot"></span><span id="currency-live-label">RATE STATUS · NOT LOADED</span></div>
+<div class="field currency-amount"><label for="currency-amount">AMOUNT TO CONVERT</label><input class="glass-input" id="currency-amount" type="number" min="0" step="any" value="1" data-virtual-keyboard="true" inputmode="none"></div>
+<div class="currency-pair">
+<div class="currency-card glass-card"><div class="currency-card-head"><span>FROM</span><span>YOU HAVE</span></div><div class="currency-identity"><img class="currency-flag" id="currency-from-flag" src="https://flagcdn.com/w40/us.png" alt="United States flag"><span class="currency-flag-fallback hidden" id="currency-from-fallback" aria-hidden="true">¤</span><div><div class="currency-code" id="currency-from-code">USD</div><div class="currency-name" id="currency-from-name">US Dollar</div></div></div><select class="glass-select" id="currency-from" aria-label="From currency"></select></div>
+<button class="currency-swap" id="currency-swap" type="button" aria-label="Swap currencies"><svg><use href="#i-swap"/></svg></button>
+<div class="currency-card glass-card"><div class="currency-card-head"><span>TO</span><span>YOU GET</span></div><div class="currency-identity"><img class="currency-flag" id="currency-to-flag" src="https://flagcdn.com/w40/in.png" alt="India flag"><span class="currency-flag-fallback hidden" id="currency-to-fallback" aria-hidden="true">¤</span><div><div class="currency-code" id="currency-to-code">INR</div><div class="currency-name" id="currency-to-name">Indian Rupee</div></div></div><select class="glass-select" id="currency-to" aria-label="To currency"></select></div>
+</div>
+<div class="currency-footer"><button class="glass-button primary" id="currency-convert" type="button">Convert currency ↗</button><div class="currency-rate" id="currency-meta">Rates load when you convert. Last updated date will appear here.</div></div>
+<div class="convert-result"><div class="result-label">CONVERTED AMOUNT</div><div class="result-value" id="currency-result">—</div><div class="result-meta" id="currency-result-meta">Choose currencies and convert to retrieve a reference rate.</div></div>
+<p class="status-line" id="currency-status" aria-live="polite">Ready when you are.</p>
+</div>
+</section>
+<section class="tool-panel glass glass-card" id="units">
+<div class="panel-heading"><div><h2>Unit converter</h2><p>Choose a category, enter a value and select units from the grouped unit library. Concentration supports mass and molar units; mass ↔ molar conversion needs an analyte molecular weight in Clinical Lab Calculator.</p></div><span class="panel-tag">03 / CONVERSIONS</span></div>
+<div class="category-pills unit-category-grid" id="unit-pills" aria-label="Unit categories"></div>
+<div class="unit-convert-card glass-card">
+<div class="field"><label for="unit-value">VALUE</label><input class="glass-input" id="unit-value" type="text" value="1" autocomplete="off" data-virtual-keyboard="true" inputmode="none"></div>
+<div class="unit-pair-grid">
+<div class="field"><label>FROM UNIT</label><button class="unit-picker-trigger" id="unit-from-trigger" type="button" aria-haspopup="dialog">Meter (m)<span>⌄</span></button></div>
+<button class="unit-swap-round" id="unit-swap" type="button" aria-label="Swap units">⇄</button>
+<div class="field"><label>TO UNIT</label><button class="unit-picker-trigger" id="unit-to-trigger" type="button" aria-haspopup="dialog">Kilometer (km)<span>⌄</span></button></div>
+</div>
+<div class="tool-actions"><button class="glass-button primary" id="unit-convert" type="button">Convert units ↗</button></div>
+<div class="convert-result"><div class="result-label">CONVERSION RESULT</div><div class="result-value" id="unit-result">—</div><div class="result-meta" id="unit-formula"></div></div>
+<p class="status-line" id="unit-status" aria-live="polite">Select a category to begin.</p>
+</div>
+<div class="unit-picker-overlay hidden" id="unit-picker-overlay" aria-hidden="true">
+<div class="unit-picker-sheet glass-card" role="dialog" aria-modal="true" aria-labelledby="unit-picker-title">
+<div class="unit-picker-header"><span></span><h3 id="unit-picker-title">Select unit</h3><button type="button" class="unit-picker-close" id="unit-picker-cancel" aria-label="Close unit picker">✕</button></div>
+<div class="unit-picker-search-wrap" id="unit-picker-search-wrap"><input id="unit-picker-search" type="search" placeholder="Search units…" aria-label="Search units"></div>
+<div class="unit-picker-list" id="unit-picker-list"></div>
+</div>
+</div>
+</section>
+<section class="tool-panel glass glass-card" id="lab">
+<div class="panel-heading"><div><h2>Clinical lab calculator</h2><p>Convert mass or molar concentrations using analyte-specific molecular weights, or calculate derived clinical laboratory parameters.</p></div><span class="panel-tag">04 / LAB SCIENCE</span></div>
+<div class="category-pills lab-mode-pills" id="lab-pills">
+<button class="category-pill active" type="button" data-lab-kind="mass" aria-pressed="true">Mass / molar concentration</button>
+<button class="category-pill" type="button" data-lab-kind="calculations" aria-pressed="false">Clinical calculations</button>
+</div>
+<div id="lab-conversion-workspace">
+<div class="category-pills lab-concentration-switch" role="tablist" aria-label="Concentration type"><button class="category-pill active" type="button" data-lab-concentration="mass" aria-pressed="true">Mass concentration</button><button class="category-pill" type="button" data-lab-concentration="molar" aria-pressed="false">Molar concentration</button></div>
+<div id="lab-mass-workspace"><div class="convert-grid lab-fields">
+<div class="field"><label for="lab-value">RESULT VALUE</label><input class="glass-input" id="lab-value" type="number" step="any" value="100" data-virtual-keyboard="true" inputmode="none"></div>
+<div class="field"><label for="lab-test">ANALYTE / TEST NAME</label><input class="glass-input" id="lab-test" list="lab-tests" placeholder="e.g. Glucose" autocomplete="off"><datalist id="lab-tests"><option value="Glucose"><option value="Urea"><option value="Creatinine"><option value="Cholesterol"><option value="Total cholesterol"><option value="HDL cholesterol"><option value="LDL cholesterol"><option value="Triglycerides"><option value="Uric acid"><option value="Bilirubin"><option value="Direct bilirubin"><option value="Lactate"><option value="Vitamin B12"><option value="25-OH Vitamin D"><option value="Vitamin D3"><option value="TSH"><option value="T3"><option value="T4"><option value="FT3"><option value="FT4"><option value="Anti TPO"><option value="Anti TG"><option value="Ferritin"><option value="Prolactin"><option value="PRL"><option value="LH"><option value="FSH"><option value="Testosterone"><option value="Progesterone"><option value="Procalcitonin"><option value="Estradiol"><option value="E2"><option value="Cortisol"><option value="Albumin"><option value="Sodium"><option value="Potassium"><option value="Chloride"><option value="Calcium"><option value="Magnesium"><option value="Phosphate"><option value="AST"><option value="SGOT"><option value="ALT"><option value="SGPT"><option value="ALP"><option value="GGT"><option value="LDH"><option value="Total protein"><option value="Globulin"><option value="TIBC"><option value="Bicarbonate"><option value="VLDL cholesterol"><option value="Iron"></datalist></div>
+<div class="field"><label>FROM UNIT</label><button class="unit-picker-trigger" id="lab-from-trigger" type="button" aria-haspopup="dialog">Milligram/deciliter (mg/dL)<span>⌄</span></button></div>
+<div class="field"><label>TO UNIT</label><button class="unit-picker-trigger" id="lab-to-trigger" type="button" aria-haspopup="dialog">Millimole/liter (mmol/L)<span>⌄</span></button></div>
+</div>
+<div class="analyte-field" id="lab-mw-options">
+<div class="field"><label for="lab-mw-mode">MOLECULAR WEIGHT METHOD</label><select class="glass-select" id="lab-mw-mode"><option value="test">Use selected analyte molecular weight</option><option value="manual">Enter molecular weight manually</option></select></div>
+<div class="field hidden" id="lab-mw-manual-wrap"><label for="lab-mw">MOLECULAR WEIGHT (g/mol)</label><input class="glass-input" id="lab-mw" type="number" min="0" step="any" placeholder="Enter g/mol" data-virtual-keyboard="true" inputmode="none"></div>
+</div>
+<p class="result-meta" id="lab-analyte-note">Choose a test. Some hormones are reported in IU/L or mIU/L and cannot be converted to molar concentration using a generic molecular weight.</p><div class="lab-profile-index info-glass"><h3>Routine profile test catalogue</h3><details><summary>Lipid profile</summary><p>Total cholesterol · HDL-C · LDL-C · VLDL-C · Triglycerides · Non-HDL-C · TC/HDL ratio · ApoA1 · ApoB</p></details><details><summary>Kidney / renal profile</summary><p>Urea / BUN · Creatinine · Uric acid · Sodium · Potassium · Chloride · Bicarbonate · Calcium · Phosphate · eGFR · Urine albumin / creatinine ratio</p></details><details><summary>Liver function profile</summary><p>Total bilirubin · Direct bilirubin · Indirect bilirubin · AST / SGOT · ALT / SGPT · ALP · GGT · Total protein · Albumin · Globulin · A/G ratio · LDH</p></details><details><summary>Thyroid and hormone profile</summary><p>TSH · Total T3 · Total T4 · FT3 · FT4 · Anti-TPO · Anti-TG · Prolactin / PRL · LH · FSH · Testosterone · Progesterone · Estradiol (E2)</p></details><details><summary>Vitamin and iron profile</summary><p>Vitamin B12 · 25-OH Vitamin D · Ferritin · Serum iron · TIBC · Transferrin saturation</p></details></div>
+<div class="tool-actions"><button class="glass-button primary" id="lab-convert" type="button">Calculate conversion ↗</button><button class="glass-button" id="lab-swap" type="button">Swap units</button></div>
+<div class="convert-result"><div class="result-label">LAB CONVERSION RESULT</div><div class="result-value" id="lab-result">—</div><div class="result-meta" id="lab-formula">No result calculated yet.</div></div>
+<p class="status-line" id="lab-status" aria-live="polite">Select mass or molar concentration to begin.</p>
+<div class="unit-picker-overlay hidden" id="lab-picker-overlay">
+<div class="unit-picker-sheet glass-card" role="dialog" aria-modal="true" aria-labelledby="lab-picker-title">
+<div class="unit-picker-header"><button type="button" id="lab-picker-cancel" aria-label="Close unit picker">✕</button><h3 id="lab-picker-title">Select unit</h3><span></span></div>
+<div class="unit-picker-list" id="lab-picker-list"></div>
+</div>
+</div>
+</div>
+<div class="lab-molar-workspace hidden" id="lab-molar-workspace">
+<div class="convert-grid lab-fields">
+<div class="field"><label for="lab-molar-value">RESULT</label><input class="glass-input" id="lab-molar-value" type="number" step="any" placeholder="Enter laboratory result" inputmode="decimal"></div>
+<div class="field"><label for="lab-molar-test">SELECT TEST</label><select class="glass-select" id="lab-molar-test"><option value="">Select test</option><option>Glucose</option><option>Urea</option><option>Creatinine</option><option>Total cholesterol</option><option>Triglycerides</option><option>Uric acid</option><option>Bilirubin</option><option>Lactate</option><option>Vitamin B12</option><option>25-OH Vitamin D</option><option>Vitamin D3</option><option>TSH</option><option>T3</option><option>T4</option><option>FT3</option><option>FT4</option><option>Anti TPO</option><option>Anti TG</option><option>Ferritin</option><option>Prolactin / PRL</option><option>LH</option><option>FSH</option><option>Testosterone</option><option>Progesterone</option><option>Procalcitonin</option><option>Estradiol / E2</option><option>Cortisol</option><option>Albumin</option><option>Sodium</option><option>Potassium</option><option>Chloride</option><option>Calcium</option><option>Magnesium</option><option>Phosphate</option><option>Iron</option></select></div>
+<div class="field"><label for="lab-molar-output-unit">SELECT OUTPUT UNIT</label><select class="glass-select" id="lab-molar-output-unit"><option value="">Select output unit</option></select></div>
+</div>
+<p class="result-meta" id="lab-molar-source-note">Choose a test to display its expected source unit.</p>
+<div class="convert-result"><div class="result-label">CONVERTED RESULT</div><div class="result-value" id="lab-molar-result">—</div><div class="result-meta" id="lab-molar-formula">Enter a result, choose a test and choose the desired output unit.</div></div>
+<p class="status-line" id="lab-molar-status" aria-live="polite">Ready.</p><button class="glass-button primary" type="button" id="lab-molar-convert">Convert result ↗</button>
+</div>
+</div>
+<div class="lab-calculations hidden glass-card" id="lab-calculations-workspace">
+ <div class="field lab-calc-select"><label for="lab-calc-type">SELECT CALCULATION</label>
+  <select class="glass-select" id="lab-calc-type">
+   <option value="homa">HOMA1 · IR, insulin sensitivity &amp; beta function</option><option value="quicki">QUICKI · Insulin sensitivity index</option><option value="fib4">FIB-4 · Liver fibrosis risk score</option><option value="eag">Estimated average glucose · HbA1c</option><option value="mentzer">Mentzer index · Microcytosis screening</option><option value="tsat">Transferrin saturation · Iron profile</option>
+   <option value="egfr">eGFR · CKD-EPI 2021</option>
+   <option value="crcl">Creatinine clearance · Cockcroft–Gault</option>
+   <option value="fena">FENa · Fractional excretion of sodium</option>
+   <option value="anion">Anion gap · Albumin corrected</option>
+   <option value="calcium">Corrected total calcium · Albumin adjusted</option>
+   <option value="ionized">Measured ionized calcium · Unit conversion</option>
+   <option value="estimatedIonized">Estimated ionized calcium · Approximation</option>
+   <option value="buncr">BUN / Creatinine ratio</option>
+   <option value="globulin">Globulin · A/G ratio</option>
+   <option value="sodium">Corrected sodium · Hyperglycaemia</option>
+   <option value="osmolality">Calculated serum osmolality</option>
+   <option value="ldl">LDL-C · Friedewald</option><option value="nonhdl">Non-HDL cholesterol</option><option value="cholratio">Total cholesterol / HDL ratio</option><option value="deritis">AST / ALT · De Ritis ratio</option><option value="apri">APRI · AST / Platelet ratio index</option><option value="rratio">R ratio · Liver injury pattern</option>
+  </select>
+ </div>
+ <p class="result-meta lab-calc-description" id="lab-calc-description"></p><div class="homa2-resource info-glass glass-card"><h3>HOMA2 · Non-linear model</h3><p>HOMA2 is an iterative physiological model, not a HOMA1 shortcut. Oxford provides iHOMA2 for academic and non-commercial use under its academic licence. Use the official educational model and read its terms. This website does not mislabel a HOMA1 approximation as HOMA2.</p><a class="glass-button primary" href="https://www.phc.ox.ac.uk/research/resources/ihoma2" target="_blank" rel="noopener noreferrer">Oxford iHOMA2 · academic / non-commercial ↗</a> <a class="glass-button" href="https://www.rdm.ox.ac.uk/about/our-facilities-and-units/DTU/software/homa/faq" target="_blank" rel="noopener noreferrer">Published model and HOMA FAQ ↗</a></div>
+ <div class="lab-calc-fields" id="lab-calc-fields"></div>
+ <div class="tool-actions"><button class="glass-button primary" id="lab-calc-run" type="button">Calculate result ↗</button><button class="glass-button" id="lab-calc-reset" type="button">Reset values</button></div>
+ <div class="convert-result lab-calc-result glass-card" aria-live="polite"><div class="result-label">CALCULATION RESULT</div><div class="result-value" id="lab-calc-result">—</div><div class="result-meta" id="lab-calc-formula">Select a calculation and enter the required values.</div></div>
+ <p class="status-line" id="lab-calc-status" aria-live="polite">Calculations run locally in your browser.</p>
+ <p class="lab-calc-disclaimer glass-card">Educational and laboratory calculation support only. Verify units, assay standardization, specimen timing and the applicable clinical guideline. Derived values do not establish a diagnosis or replace measured tests and professional interpretation.</p>
+ <p class="lab-calc-sources">Equation references:
+  <a href="https://www.rcpa.edu.au/Manuals/RCPA-Manual/Pathology-Tests/F/FIB-4" target="_blank" rel="noopener noreferrer">RCPA · FIB-4</a> ·
+  <a href="https://www.niddk.nih.gov/research-funding/research-programs/laboratory/glomerular-filtration-rate-equations/adults" target="_blank" rel="noopener noreferrer">NIDDK · CKD-EPI 2021</a> ·
+  <a href="https://www.rdm.ox.ac.uk/about/our-facilities-and-units/DTU/software/homa/faq" target="_blank" rel="noopener noreferrer">Oxford · HOMA1</a> ·
+  <a href="https://www.ncbi.nlm.nih.gov/books/NBK507821/" target="_blank" rel="noopener noreferrer">NCBI · FENa</a> ·
+  <a href="https://www.ncbi.nlm.nih.gov/books/NBK448090/" target="_blank" rel="noopener noreferrer">NCBI · Anion gap correction</a> ·
+  <a href="https://pmc.ncbi.nlm.nih.gov/articles/PMC7479837/" target="_blank" rel="noopener noreferrer">Corrected sodium review</a> ·
+  <a href="https://academic.oup.com/ndt/article/35/11/1827/5891012" target="_blank" rel="noopener noreferrer">Calculated osmolality</a> ·
+  <a href="https://www.ncbi.nlm.nih.gov/books/NBK482128/" target="_blank" rel="noopener noreferrer">NCBI · Corrected calcium</a> ·
+  <a href="https://www.accessdata.fda.gov/drugsatfda_docs/nda/2015/125559Orig1s000ClinPharmR.pdf" target="_blank" rel="noopener noreferrer">FDA · Friedewald LDL</a>
+ </p>
+</div>
+</section>
+</main>
+
+<button class="virtual-keypad-toggle" id="virtual-keypad-toggle" type="button" aria-pressed="false">⌨ Open keypad</button><div class="virtual-keypad hidden" id="virtual-keypad" role="group" aria-label="Numeric keypad"><div class="virtual-keypad-head"><span>NUMBER PAD</span><button type="button" data-vk="done" aria-label="Close numeric keypad">Done ✕</button></div><div class="virtual-keypad-grid"><button type="button" data-vk="7">7</button><button type="button" data-vk="8">8</button><button type="button" data-vk="9">9</button><button type="button" data-vk="4">4</button><button type="button" data-vk="5">5</button><button type="button" data-vk="6">6</button><button type="button" data-vk="1">1</button><button type="button" data-vk="2">2</button><button type="button" data-vk="3">3</button><button type="button" data-vk=".">.</button><button type="button" data-vk="0">0</button><button type="button" data-vk="back">⌫</button><button type="button" data-vk="clear" class="vk-clear">Clear</button><button type="button" data-vk="-">±</button><button type="button" data-vk="done" class="vk-done">Done</button></div></div>
+<script defer src="/scripts/calculator.js"></script>
+<script defer src="/scripts/navigation.js"></script>
+</body></html>
