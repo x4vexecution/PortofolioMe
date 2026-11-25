@@ -106,8 +106,8 @@ const CONFIG = {
 
   /* Your card art. Missing files fall back to a labelled grey face. */
   assets: {
-    front: 'assets/images/card-front.png',
-    back: 'assets/images/card-back.png',
+    front: 'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1bc02a650c14a95053c88a9166a1eb97.jpg',
+    back: 'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1ad905ac00ce4dde1a796b5dcbc6060b.jpg',
   },
 };
 
