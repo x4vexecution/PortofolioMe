@@ -1,5 +1,5 @@
 /**
- * Hanging lanyard ID badge for the portfolio hero.
+ * Realistic elastic hanging lanyard ID badge for the portfolio hero.
  *
  * Mount:   <div id="lanyard" class="hero-lanyard" aria-hidden="true"></div>
  * Script:  <script type="module" src="/scripts/lanyard.js"></script>
@@ -18,7 +18,7 @@ import RAPIER from '@dimforge/rapier3d-compat';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
 /* ------------------------------------------------------------------------- *
- * Config — every tunable lives here
+ * Config â€” every tunable lives here
  * ------------------------------------------------------------------------- */
 const CONFIG = {
   /* Card, in local units. Portrait 1:1.4. */
@@ -36,26 +36,26 @@ const CONFIG = {
 
   /* Strap ribbon */
   strap: {
-    width: 0.48,            // slimmer premium ribbon: 0.16 * card width
+    width: 0.66,            // 0.22 * card width
     thickness: 0.03,        // real thickness, rounded bevel edges
-    samples: 56,            // ribbon length segments
+    samples: 96,            // high-resolution ribbon surface for smooth bending and twist
     tileWidths: 4,          // texture tile length = tileWidths * width
     roughness: 0.75,
-    text: 'LUMINICA • ANDROID SYSTEMS • LX •',
+    text: 'LUMINICA â€¢ ANDROID SYSTEMS â€¢ LX â€¢',
   },
 
   /* Physics. Units are local; gravity is tuned for the badge feel. */
   physics: {
     gravity: -40,
-    linearDamping: 1.5,     // released drag swings 2-3 times, settles ~3s
-    angularDamping: 3.0,
-    ropeSegments: 5,        // 4-5 rigid links anchor -> crimp
-    ropeSegmentLength: 0.62,
+    linearDamping: 0.85,     // softer damping: elastic recoil and longer natural swing
+    angularDamping: 1.8,
+    ropeSegments: 10,       // ten articulated links for smoother elastic motion
+    ropeSegmentLength: 0.315,
     claspLength: 0.50,      // second joint: crimp -> clasp -> card slot
     ropeDensity: 40,
     claspDensity: 20,
     cardDensity: 0.25,
-    solverIterations: 12,
+    solverIterations: 18,
     maxPhysicsSteps: 5,     // per frame; mobile capped at 2
     maxStepsMobile: 2,
     fixedStep: 1 / 60,
@@ -73,9 +73,8 @@ const CONFIG = {
   /* Responsive layout */
   layout: {
     mobileMaxWidth: 767,
-    mobileCardWidth: 0.68,  // oversized portrait badge; intentionally bleeds past the viewport
-    mobileRight: 0.80,      // badge centre sits near the right edge on phones
-    mobileVerticalBias: 0.02, // keep the card around the visual centre, like the reference
+    mobileCardWidth: 0.60,  // larger, more prominent badge on phones
+    mobileRight: 0.70,      // keep the badge toward the right, like a hanging hero prop
     desktopCardWidth: 0.25, // card width / canvas width on desktop
     desktopRight: 0.72,     // card centre as a fraction of canvas width
     verticalBias: -0.25,    // card centre target, fraction of visible height
@@ -89,16 +88,16 @@ const CONFIG = {
     dragThresholdTouch: 10,
     clickMaxMs: 300,        // press shorter than this + no drag = click/flip
     flipDuration: 600,      // ms, easeInOutCubic
-    maxReleaseSpeed: 14,
+    maxReleaseSpeed: 18,
   },
 
   /* Palette: graphite / silver */
   colors: {
-    strapBase: '#17191e',
-    strapHighlight: '#d6dae2',
-    strapStitch: '#aeb5c0',
-    strapBorder: '#08090c',
-    metal: 0xc8ccd5,
+    strapBase: '#3a3d42',
+    strapHighlight: '#8b9099',
+    strapStitch: '#c9ccd1',
+    strapBorder: '#202226',
+    metal: 0xb8bcc4,
     cardEdge: 0x1c1e22,
     key: 0xffffff,
     rim: 0x6f8dff,
@@ -191,10 +190,9 @@ export async function createLanyard(container) {
     scale = Math.min(scale, (LAY.fit * visibleH) / (ropeLen + claspLen + H));
 
     const camX = (0.5 - (mobile ? LAY.mobileRight : LAY.desktopRight)) * visibleW;
-    const verticalBias = mobile ? (LAY.mobileVerticalBias ?? LAY.verticalBias) : LAY.verticalBias;
     const anchorY = Math.max(
       visibleH / 2 + LAY.anchorMargin,
-      verticalBias * visibleH + anchorToCard * scale,
+      LAY.verticalBias * visibleH + anchorToCard * scale,
     );
 
     return { w, h, aspect, visibleH, visibleW, scale, camX, anchorY };
@@ -217,9 +215,6 @@ export async function createLanyard(container) {
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = maxAniso;
-          tex.generateMipmaps = true;
-          tex.minFilter = THREE.LinearMipmapLinearFilter;
-          tex.magFilter = THREE.LinearFilter;
           // Cover the portrait card without distorting the source image.
           // Crop only the excess dimension and keep the image centered.
           const image = tex.image;
@@ -491,25 +486,24 @@ export async function createLanyard(container) {
 
   const updateWalls = () => {
     const s = view.scale;
-    const left = (view.camX - view.visibleW / 2) / s;
-    const right = (view.camX + view.visibleW / 2) / s;
-    const bottom = -view.visibleH / 2 / s;
-    const top = view.visibleH / 2 / s;
-
-    // Keep safety colliders well outside the visible area. The badge is allowed
-    // to travel beyond every viewport edge instead of colliding with canvas walls.
-    const marginX = (view.visibleW / s) * 1.35;
-    const marginY = (view.visibleH / s) * 1.35;
-    wallLeft.setTranslation({ x: left - marginX, y: 0, z: 0 }, true);
-    wallRight.setTranslation({ x: right + marginX, y: 0, z: 0 }, true);
-    wallBottom.setTranslation({ x: 0, y: bottom - marginY, z: 0 }, true);
+    // Walls are safety limits only; keep them far outside the visible stage.
+    const left = -100;
+    const right = 100;
+    const bottom = -100;
+    wallLeft.setTranslation({ x: left, y: 0, z: 0 }, true);
+    wallRight.setTranslation({ x: right, y: 0, z: 0 }, true);
+    wallBottom.setTranslation({ x: 0, y: bottom, z: 0 }, true);
 
     const rx = (W / 2) * 1.02;
     const ry = (H / 2) * 1.02;
-    dragBounds.minX = left - marginX + rx;
-    dragBounds.maxX = right + marginX - rx;
-    dragBounds.minY = bottom - marginY + ry;
-    dragBounds.maxY = top + marginY - ry;
+    dragBounds.minX = -80;
+    dragBounds.maxX = 80;
+    dragBounds.minY = -80;
+    dragBounds.maxY = 80;
+    if (dragBounds.minX > dragBounds.maxX) {
+      const mid = (dragBounds.minX + dragBounds.maxX) / 2;
+      dragBounds.minX = dragBounds.maxX = mid;
+    }
   };
   updateWalls();
 
@@ -579,8 +573,9 @@ export async function createLanyard(container) {
   ];
   const V = [0, 0.06, 0.94, 1, 0.94, 0.06];
 
+  let strapTwist = 0;
   const updateStrap = (alpha) => {
-    curvePoints[0].set(0, anchorLocal + 1.15, 0);
+    curvePoints[0].set(0, anchorLocal + 1.6, 0);
     curvePoints[1].set(0, anchorLocal, 0);
     for (let i = 0; i < ropeBodies.length; i++) {
       curvePoints[i + 2].lerpVectors(prevRope[i], ropePos[i], alpha);
@@ -604,6 +599,11 @@ export async function createLanyard(container) {
         tmpNrm.addScaledVector(tmpTan, -tmpNrm.dot(tmpTan));
         if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(0, 0, 1);
         tmpNrm.normalize();
+      }
+      // Apply finger-driven torsion progressively along the ribbon. The upper
+      // end follows the hand first; the twist fades toward the badge naturally.
+      if (Math.abs(strapTwist) > 1e-5) {
+        tmpNrm.applyAxisAngle(tmpTan, strapTwist * t);
       }
       // right-handed frame (side, normal, tangent) keeps the face winding outward
       tmpSide.crossVectors(tmpNrm, tmpTan).normalize();
@@ -665,6 +665,7 @@ export async function createLanyard(container) {
   const stepPhysics = () => {
     simTime += PHYS.fixedStep;
     if (!dragging) {
+      strapTwist *= 0.9975;
       // tiny idle sway; no auto rotation, the card always faces front
       const sway = Math.sin(simTime * PHYS.swaySpeed) * 0.9 + Math.sin(simTime * 1.7 + 1.3) * 0.4;
       cardBody.applyImpulse({ x: sway * PHYS.swayImpulse, y: 0, z: 0 }, true);
@@ -806,6 +807,9 @@ export async function createLanyard(container) {
   let pressTime = 0;
   let moved = false;
   let lastDragTime = 0;
+  let lastPointerX = 0;
+  let lastPointerY = 0;
+  let dragTwistVelocity = 0;
 
   const setPointer = (clientX, clientY) => {
     const r = canvas.getBoundingClientRect();
@@ -834,6 +838,8 @@ export async function createLanyard(container) {
     camera.getWorldDirection(camDir);
     dragPlane.setFromNormalAndCoplanarPoint(camDir, worldCardPos);
 
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
     setPointer(e.clientX, e.clientY);
     raycaster.setFromCamera(pointer, camera);
     if (raycaster.ray.intersectPlane(dragPlane, planeHit)) {
@@ -845,6 +851,9 @@ export async function createLanyard(container) {
     prevDragTarget.copy(cardPos);
     dragVel.set(0, 0, 0);
     lastDragTime = performance.now();
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+    dragTwistVelocity = 0;
     // Temporarily drive every link as a kinematic chain. This lets the badge
     // follow the pointer freely while the ribbon visibly lengthens with it.
     for (const body of dragBodies) {
@@ -866,9 +875,15 @@ export async function createLanyard(container) {
     if (tmpVel.length() > ACT.maxReleaseSpeed) tmpVel.setLength(ACT.maxReleaseSpeed);
     // Return the complete chain to Rapier. The fixed joints pull the stretched
     // ribbon back naturally, producing a spring-like recoil on release.
-    for (const body of dragBodies) {
+    // Let the ribbon unwind gradually after release instead of snapping flat.
+    dragTwistVelocity *= 0.35;
+    for (let i = 0; i < dragBodies.length; i++) {
+      const body = dragBodies[i];
       body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
-      body.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
+      // A subtle velocity gradient makes the upper strap lag behind the card,
+      // creating a more convincing elastic snap instead of a rigid reset.
+      const lag = 0.72 + (i / Math.max(1, dragBodies.length - 1)) * 0.28;
+      body.setLinvel({ x: tmpVel.x * lag, y: tmpVel.y * lag, z: tmpVel.z * lag }, true);
       body.wakeUp();
     }
     // the card swings; it should not spin in its own plane
@@ -907,18 +922,35 @@ export async function createLanyard(container) {
       beginDrag(e);
     }
 
+    const pointerDeltaX = e.clientX - lastPointerX;
+    const pointerDeltaY = e.clientY - lastPointerY;
+    lastPointerX = e.clientX;
+    lastPointerY = e.clientY;
+    // Horizontal finger movement winds/unwinds the flat webbing like a real
+    // ribbon; vertical movement adds a smaller torsional response.
+    dragTwistVelocity = THREE.MathUtils.clamp(
+      dragTwistVelocity * 0.72 + (pointerDeltaX - pointerDeltaY * 0.22) * 0.012,
+      -0.16,
+      0.16,
+    );
+    strapTwist = THREE.MathUtils.clamp(strapTwist + dragTwistVelocity, -Math.PI * 2.5, Math.PI * 2.5);
+    if (Math.abs(dragTwistVelocity) > 0.0001) {
+      cardBody.applyTorqueImpulse({ x: 0, y: dragTwistVelocity * 0.018, z: -dragTwistVelocity * 0.012 }, true);
+    }
+
     setPointer(e.clientX, e.clientY);
     raycaster.setFromCamera(pointer, camera);
     if (!raycaster.ray.intersectPlane(dragPlane, planeHit)) return;
 
     tmpWorld.copy(planeHit).add(dragOffset);
     root.worldToLocal(tmpWorld);
-    // Keep the badge inside the visible canvas, but remove the old rope-length
-    // clamp: the complete chain is repositioned along the anchor-to-card line.
+    // Free-drag region intentionally extends well beyond the viewport.
+    // This lets the badge travel partly off-screen instead of hitting invisible
+    // screen edges, while keeping coordinates finite and physics stable.
     dragTarget.set(
-      THREE.MathUtils.clamp(tmpWorld.x, dragBounds.minX, dragBounds.maxX),
-      THREE.MathUtils.clamp(tmpWorld.y, dragBounds.minY, dragBounds.maxY),
-      THREE.MathUtils.clamp(tmpWorld.z, dragBounds.minZ, dragBounds.maxZ),
+      THREE.MathUtils.clamp(tmpWorld.x, -80, 80),
+      THREE.MathUtils.clamp(tmpWorld.y, -80, anchorLocal + 80),
+      THREE.MathUtils.clamp(tmpWorld.z, -12, 12),
     );
     const dx = dragTarget.x;
     const dy = dragTarget.y - anchorLocal;
