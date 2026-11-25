@@ -215,6 +215,22 @@ export async function createLanyard(container) {
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = maxAniso;
+          // Cover the portrait card without distorting the source image.
+          // Crop only the excess dimension and keep the image centered.
+          const image = tex.image;
+          const imageAspect = (image?.naturalWidth || image?.width || 1) /
+            (image?.naturalHeight || image?.height || 1);
+          const cardAspect = W / H;
+          tex.wrapS = THREE.ClampToEdgeWrapping;
+          tex.wrapT = THREE.ClampToEdgeWrapping;
+          if (imageAspect > cardAspect) {
+            tex.repeat.x = cardAspect / imageAspect;
+            tex.offset.x = (1 - tex.repeat.x) / 2;
+          } else {
+            tex.repeat.y = imageAspect / cardAspect;
+            tex.offset.y = (1 - tex.repeat.y) / 2;
+          }
+          tex.needsUpdate = true;
           resolve(tex);
         },
         undefined,
@@ -777,6 +793,7 @@ export async function createLanyard(container) {
   const tmpWorld = new THREE.Vector3();
 
   let pointerId = null;
+  const dragBodies = [...ropeBodies, claspBody, cardBody];
   let pressX = 0;
   let pressY = 0;
   let pressTime = 0;
@@ -821,7 +838,11 @@ export async function createLanyard(container) {
     prevDragTarget.copy(cardPos);
     dragVel.set(0, 0, 0);
     lastDragTime = performance.now();
-    cardBody.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
+    // Temporarily drive every link as a kinematic chain. This lets the badge
+    // follow the pointer freely while the ribbon visibly lengthens with it.
+    for (const body of dragBodies) {
+      body.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
+    }
   };
 
   const endDrag = () => {
@@ -834,10 +855,15 @@ export async function createLanyard(container) {
     pointerId = null;
     canvas.style.touchAction = '';
 
-    cardBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
     tmpVel.copy(dragVel);
     if (tmpVel.length() > ACT.maxReleaseSpeed) tmpVel.setLength(ACT.maxReleaseSpeed);
-    cardBody.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
+    // Return the complete chain to Rapier. The fixed joints pull the stretched
+    // ribbon back naturally, producing a spring-like recoil on release.
+    for (const body of dragBodies) {
+      body.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
+      body.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
+      body.wakeUp();
+    }
     // the card swings; it should not spin in its own plane
     cardBody.setAngvel(
       { x: 0, y: 0, z: THREE.MathUtils.clamp(-tmpVel.x * 0.12, -2, 2) },
@@ -880,21 +906,28 @@ export async function createLanyard(container) {
 
     tmpWorld.copy(planeHit).add(dragOffset);
     root.worldToLocal(tmpWorld);
+    // Keep the badge inside the visible canvas, but remove the old rope-length
+    // clamp: the complete chain is repositioned along the anchor-to-card line.
     dragTarget.set(
       THREE.MathUtils.clamp(tmpWorld.x, dragBounds.minX, dragBounds.maxX),
       THREE.MathUtils.clamp(tmpWorld.y, dragBounds.minY, dragBounds.maxY),
       THREE.MathUtils.clamp(tmpWorld.z, dragBounds.minZ, dragBounds.maxZ),
     );
-    // Never stretch the chain: stay within reach of the anchor.
     const dx = dragTarget.x;
     const dy = dragTarget.y - anchorLocal;
-    const dist = Math.hypot(dx, dy);
-    const maxReach = anchorToCard * 1.10; // modest extra reach gives the pull an elastic feel
-    if (dist > maxReach) {
-      const k = maxReach / dist;
-      dragTarget.x = dx * k;
-      dragTarget.y = anchorLocal + dy * k;
+    const dz = dragTarget.z;
+    const placeAlongChain = (body, distanceFromAnchor) => {
+      const t = distanceFromAnchor / anchorToCard;
+      body.setNextKinematicTranslation({
+        x: dx * t,
+        y: anchorLocal + dy * t,
+        z: dz * t,
+      });
+    };
+    for (let i = 0; i < ropeBodies.length; i++) {
+      placeAlongChain(ropeBodies[i], L * (i + 0.5));
     }
+    placeAlongChain(claspBody, ropeLen + claspLen / 2);
     cardBody.setNextKinematicTranslation(dragTarget);
 
     const now = performance.now();
