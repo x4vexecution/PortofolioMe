@@ -36,7 +36,7 @@ const CONFIG = {
 
   /* Strap ribbon */
   strap: {
-    width: 0.66,            // 0.22 * card width
+    width: 0.48,            // slimmer premium ribbon: 0.16 * card width
     thickness: 0.03,        // real thickness, rounded bevel edges
     samples: 56,            // ribbon length segments
     tileWidths: 4,          // texture tile length = tileWidths * width
@@ -73,8 +73,9 @@ const CONFIG = {
   /* Responsive layout */
   layout: {
     mobileMaxWidth: 767,
-    mobileCardWidth: 0.52,  // slightly smaller on phones for hero breathing room
-    mobileRight: 0.74,      // shift badge right on phones
+    mobileCardWidth: 0.68,  // oversized portrait badge; intentionally bleeds past the viewport
+    mobileRight: 0.80,      // badge centre sits near the right edge on phones
+    mobileVerticalBias: 0.02, // keep the card around the visual centre, like the reference
     desktopCardWidth: 0.25, // card width / canvas width on desktop
     desktopRight: 0.72,     // card centre as a fraction of canvas width
     verticalBias: -0.25,    // card centre target, fraction of visible height
@@ -93,11 +94,11 @@ const CONFIG = {
 
   /* Palette: graphite / silver */
   colors: {
-    strapBase: '#3a3d42',
-    strapHighlight: '#8b9099',
-    strapStitch: '#c9ccd1',
-    strapBorder: '#202226',
-    metal: 0xb8bcc4,
+    strapBase: '#17191e',
+    strapHighlight: '#d6dae2',
+    strapStitch: '#aeb5c0',
+    strapBorder: '#08090c',
+    metal: 0xc8ccd5,
     cardEdge: 0x1c1e22,
     key: 0xffffff,
     rim: 0x6f8dff,
@@ -190,9 +191,10 @@ export async function createLanyard(container) {
     scale = Math.min(scale, (LAY.fit * visibleH) / (ropeLen + claspLen + H));
 
     const camX = (0.5 - (mobile ? LAY.mobileRight : LAY.desktopRight)) * visibleW;
+    const verticalBias = mobile ? (LAY.mobileVerticalBias ?? LAY.verticalBias) : LAY.verticalBias;
     const anchorY = Math.max(
       visibleH / 2 + LAY.anchorMargin,
-      LAY.verticalBias * visibleH + anchorToCard * scale,
+      verticalBias * visibleH + anchorToCard * scale,
     );
 
     return { w, h, aspect, visibleH, visibleW, scale, camX, anchorY };
@@ -215,6 +217,9 @@ export async function createLanyard(container) {
         (tex) => {
           tex.colorSpace = THREE.SRGBColorSpace;
           tex.anisotropy = maxAniso;
+          tex.generateMipmaps = true;
+          tex.minFilter = THREE.LinearMipmapLinearFilter;
+          tex.magFilter = THREE.LinearFilter;
           // Cover the portrait card without distorting the source image.
           // Crop only the excess dimension and keep the image centered.
           const image = tex.image;
@@ -489,20 +494,22 @@ export async function createLanyard(container) {
     const left = (view.camX - view.visibleW / 2) / s;
     const right = (view.camX + view.visibleW / 2) / s;
     const bottom = -view.visibleH / 2 / s;
-    wallLeft.setTranslation({ x: left, y: 0, z: 0 }, true);
-    wallRight.setTranslation({ x: right, y: 0, z: 0 }, true);
-    wallBottom.setTranslation({ x: 0, y: bottom, z: 0 }, true);
+    const top = view.visibleH / 2 / s;
+
+    // Keep safety colliders well outside the visible area. The badge is allowed
+    // to travel beyond every viewport edge instead of colliding with canvas walls.
+    const marginX = (view.visibleW / s) * 1.35;
+    const marginY = (view.visibleH / s) * 1.35;
+    wallLeft.setTranslation({ x: left - marginX, y: 0, z: 0 }, true);
+    wallRight.setTranslation({ x: right + marginX, y: 0, z: 0 }, true);
+    wallBottom.setTranslation({ x: 0, y: bottom - marginY, z: 0 }, true);
 
     const rx = (W / 2) * 1.02;
     const ry = (H / 2) * 1.02;
-    dragBounds.minX = left + rx;
-    dragBounds.maxX = right - rx;
-    dragBounds.minY = bottom + ry;
-    dragBounds.maxY = view.visibleH / 2 / s - ry;
-    if (dragBounds.minX > dragBounds.maxX) {
-      const mid = (dragBounds.minX + dragBounds.maxX) / 2;
-      dragBounds.minX = dragBounds.maxX = mid;
-    }
+    dragBounds.minX = left - marginX + rx;
+    dragBounds.maxX = right + marginX - rx;
+    dragBounds.minY = bottom - marginY + ry;
+    dragBounds.maxY = top + marginY - ry;
   };
   updateWalls();
 
@@ -573,7 +580,7 @@ export async function createLanyard(container) {
   const V = [0, 0.06, 0.94, 1, 0.94, 0.06];
 
   const updateStrap = (alpha) => {
-    curvePoints[0].set(0, anchorLocal + 1.6, 0);
+    curvePoints[0].set(0, anchorLocal + 1.15, 0);
     curvePoints[1].set(0, anchorLocal, 0);
     for (let i = 0; i < ropeBodies.length; i++) {
       curvePoints[i + 2].lerpVectors(prevRope[i], ropePos[i], alpha);
