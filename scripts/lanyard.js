@@ -73,7 +73,8 @@ const CONFIG = {
   /* Responsive layout */
   layout: {
     mobileMaxWidth: 767,
-    mobileCardWidth: 0.60,  // card width / canvas width on phones
+    mobileCardWidth: 0.52,  // slightly smaller on phones for hero breathing room
+    mobileRight: 0.74,      // shift badge right on phones
     desktopCardWidth: 0.25, // card width / canvas width on desktop
     desktopRight: 0.72,     // card centre as a fraction of canvas width
     verticalBias: -0.25,    // card centre target, fraction of visible height
@@ -167,6 +168,14 @@ export async function createLanyard(container) {
   const root = new THREE.Group();
   scene.add(root);
 
+  // Visual-only entrance: the entire assembly drops together, so the existing
+  // Rapier constraints and all interaction state remain untouched.
+  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
+  const introOffset = reduceMotion ? 0 : 0; // assigned after the first layout is known
+  let introStart = 0;
+  let introPlayed = false;
+  let introDistance = 0;
+
   const computeLayout = () => {
     const w = container.clientWidth || 1;
     const h = container.clientHeight || 1;
@@ -180,7 +189,7 @@ export async function createLanyard(container) {
     // Never let the chain (rope + clasp + card) be taller than the canvas.
     scale = Math.min(scale, (LAY.fit * visibleH) / (ropeLen + claspLen + H));
 
-    const camX = (0.5 - (mobile ? 0.5 : LAY.desktopRight)) * visibleW;
+    const camX = (0.5 - (mobile ? LAY.mobileRight : LAY.desktopRight)) * visibleW;
     const anchorY = Math.max(
       visibleH / 2 + LAY.anchorMargin,
       LAY.verticalBias * visibleH + anchorToCard * scale,
@@ -190,6 +199,7 @@ export async function createLanyard(container) {
   };
 
   let view = computeLayout();
+  introDistance = reduceMotion ? 0 : (view.visibleH / view.scale) * 0.72;
   root.scale.setScalar(view.scale);
   camera.aspect = view.aspect;
   camera.updateProjectionMatrix();
@@ -667,6 +677,19 @@ export async function createLanyard(container) {
     crimpGroup.position.copy(curvePoints[curvePoints.length - 1]).addScaledVector(strapEndDir, 0.07);
     crimpGroup.quaternion.setFromUnitVectors(UP_AXIS, strapEndDir);
 
+    if (introPlayed && introStart > 0 && introDistance > 0) {
+      const elapsed = (now - introStart) / 1000;
+      const duration = 1.65;
+      if (elapsed < duration) {
+        const t = elapsed / duration;
+        // Damped spring: quick drop, small overshoot, then a soft settle.
+        root.position.y = introDistance * Math.exp(-5.2 * t) * Math.cos(8.2 * t);
+      } else {
+        root.position.y = 0;
+        introStart = 0;
+      }
+    }
+
     renderer.render(scene, camera);
   };
 
@@ -691,6 +714,13 @@ export async function createLanyard(container) {
     running = true;
     accumulator = 0;
     lastTime = performance.now();
+    if (!introPlayed) {
+      introPlayed = true;
+      if (introDistance > 0) {
+        root.position.y = introDistance;
+        introStart = lastTime;
+      }
+    }
     rafId = requestAnimationFrame(tick);
   };
   const stop = () => {
@@ -763,7 +793,10 @@ export async function createLanyard(container) {
     setPointer(clientX, clientY);
     scene.updateMatrixWorld();
     raycaster.setFromCamera(pointer, camera);
-    return raycaster.intersectObject(coreMesh, false).length > 0;
+    // The ribbon is a real hit target too, so users can start a pull anywhere
+    // along the visible lanyard. Refresh its bounds because its vertices move.
+    strapGeo.computeBoundingSphere();
+    return raycaster.intersectObjects([coreMesh, strapMesh], false).length > 0;
   };
 
   const beginDrag = (e) => {
@@ -856,7 +889,7 @@ export async function createLanyard(container) {
     const dx = dragTarget.x;
     const dy = dragTarget.y - anchorLocal;
     const dist = Math.hypot(dx, dy);
-    const maxReach = anchorToCard * 1.002; // a hair over rest so grabbing never snaps
+    const maxReach = anchorToCard * 1.10; // modest extra reach gives the pull an elastic feel
     if (dist > maxReach) {
       const k = maxReach / dist;
       dragTarget.x = dx * k;
