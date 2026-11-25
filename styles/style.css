@@ -2255,3 +2255,136 @@ html body[data-theme="day"] .ambient {
 @media(max-width:639px){.tech-stack-section{padding-bottom:calc(116px + env(safe-area-inset-bottom,0px))}.tech-stack-grid{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}.tech-stack-section .tech-card{min-height:204px;padding:16px;border-radius:17px}.tech-stack-section .tech-card-top{margin-bottom:19px}.tech-stack-section .tech-card-name h3{font-size:clamp(14px,3.8vw,16px);line-height:1.3}.tech-stack-section .tech-card-name>span{font-size:9px;letter-spacing:.055em}.tech-stack-section .tech-proficiency{margin-top:21px;gap:7px}.tech-stack-section .tech-proficiency>span{font-size:8px;letter-spacing:.035em;line-height:1.35}.tech-stack-section .tech-proficiency strong{font-size:16px}.tech-stack-section .tech-proficiency strong small{font-size:10px}}
 @media(max-width:360px){.tech-stack-grid{gap:9px}.tech-stack-section .tech-card{padding:13px;min-height:198px}.tech-stack-section .tech-card-name h3{font-size:14px}}
 @media(prefers-reduced-motion:reduce){.tech-stack-section .tech-card,.tech-stack-section .tech-meter>span{transition:none;animation:none}}
+
+/* Luminica Skills — restrained progress dashboard redesign */
+.tech-stack-section .skills-dashboard{
+  width:100%;
+  max-width:900px;
+  margin:10px auto 0;
+  padding:clamp(22px,3.2vw,34px);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:24px;
+  background:linear-gradient(145deg,rgba(17,23,39,.76),rgba(7,11,21,.82));
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.045),0 18px 55px rgba(0,0,0,.16);
+  backdrop-filter:blur(16px) saturate(120%);
+  -webkit-backdrop-filter:blur(16px) saturate(120%);
+}
+.skills-dashboard-heading{
+  display:flex;
+  align-items:flex-start;
+  justify-content:space-between;
+  gap:18px;
+  margin-bottom:30px;
+}
+.skills-dashboard-heading h3{
+  margin:0;
+  color:#f1f3fb;
+  font:600 clamp(20px,2.2vw,24px) var(--sans);
+  letter-spacing:-.6px;
+}
+.skills-dashboard-heading p{
+  margin:7px 0 0;
+  color:rgba(193,201,219,.64);
+  font-size:14px;
+}
+.skills-dashboard-tag{
+  display:inline-flex;
+  align-items:center;
+  gap:8px;
+  padding:8px 11px;
+  border:1px solid rgba(125,154,255,.17);
+  border-radius:999px;
+  color:rgba(190,205,245,.72);
+  background:rgba(91,117,190,.075);
+  font:9px var(--mono);
+  letter-spacing:1.1px;
+  white-space:nowrap;
+}
+.skills-live-dot{
+  width:6px;height:6px;border-radius:50%;
+  background:#8da7ff;
+  box-shadow:0 0 9px rgba(141,167,255,.65);
+}
+.skills-list{display:flex;flex-direction:column;gap:23px}
+.skill-row{
+  display:grid;
+  grid-template-columns:42px minmax(0,1fr);
+  align-items:center;
+  gap:15px;
+  min-width:0;
+}
+.skill-row-icon{
+  width:40px;height:40px;
+  display:grid;place-items:center;
+  border:1px solid rgba(255,255,255,.105);
+  border-radius:11px;
+  background:rgba(255,255,255,.045);
+}
+.skill-row-icon img{width:22px;height:22px;object-fit:contain}
+.skill-row-main{min-width:0}
+.skill-row-heading{
+  display:flex;align-items:center;justify-content:space-between;
+  gap:14px;margin-bottom:9px;
+}
+.skill-row-heading h3{
+  margin:0;color:#edf0fa;
+  font:500 15px var(--sans);
+  letter-spacing:-.15px;
+  overflow-wrap:anywhere;
+}
+.skill-row-heading>span{
+  flex:none;color:rgba(221,227,242,.72);
+  font:500 13px var(--mono);
+  font-variant-numeric:tabular-nums;
+}
+.skill-row-track{
+  width:100%;height:6px;overflow:hidden;
+  border-radius:999px;
+  background:rgba(111,132,179,.16);
+}
+.skill-row-track>span{
+  display:block;width:var(--skill-level);height:100%;
+  border-radius:inherit;
+  background:linear-gradient(90deg,#7887ed 0%,#829ff7 58%,#79c5e9 100%);
+  box-shadow:0 0 10px rgba(117,151,239,.17);
+  transform-origin:left;
+}
+.skill-row-category{
+  display:block;margin-top:6px;
+  color:rgba(169,181,207,.52);
+  font:9px var(--mono);
+  letter-spacing:1.05px;
+  text-transform:uppercase;
+}
+.tech-stack-section .tech-stack-note{margin-top:20px}
+@media(hover:hover) and (pointer:fine){
+ .skill-row-icon{transition:border-color .2s ease,background .2s ease}
+ .skill-row:hover .skill-row-icon{
+   border-color:rgba(153,177,255,.32);
+   background:rgba(111,137,211,.09);
+ }
+ .skill-row-track>span{transition:filter .2s ease}
+ .skill-row:hover .skill-row-track>span{filter:brightness(1.12)}
+}
+@media(max-width:639px){
+ .tech-stack-section{padding-bottom:calc(120px + env(safe-area-inset-bottom,0px))}
+ .tech-stack-section .skills-dashboard{
+   padding:21px 17px;
+   border-radius:20px;
+   margin-top:4px;
+ }
+ .skills-dashboard-heading{margin-bottom:25px;gap:10px}
+ .skills-dashboard-heading h3{font-size:20px}
+ .skills-dashboard-heading p{font-size:12px}
+ .skills-dashboard-tag{font-size:8px;padding:7px 8px}
+ .skills-list{gap:22px}
+ .skill-row{grid-template-columns:38px minmax(0,1fr);gap:12px}
+ .skill-row-icon{width:36px;height:36px;border-radius:10px}
+ .skill-row-icon img{width:20px;height:20px}
+ .skill-row-heading h3{font-size:14px}
+ .skill-row-heading>span{font-size:12px}
+ .skill-row-category{font-size:8px}
+}
+@media(prefers-reduced-motion:reduce){
+ .skill-row-icon,.skill-row-track>span{transition:none}
+}
