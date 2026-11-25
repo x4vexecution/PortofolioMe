@@ -1,1309 +1,935 @@
 /**
- * LUMINICA — Premium Lanyard & ID Card System
+ * LUMINICA — Complete Lanyard & ID Card Interactive System
+ * Target: AddCard/scripts/lanyard.js
  *
- * Mount:   <div id="lanyard" class="hero-lanyard" aria-hidden="true"></div>
- * Script:  <script type="module" src="/scripts/lanyard.js"></script>
- * Deps:    three + @dimforge/rapier3d-compat (importmap)
- *
- * Complete redesign: champagne-gold woven textile strap, premium hardware,
- * LUMINICA-only branding, one continuous strap construction.
+ * Features:
+ * - Single continuous woven strap (deep charcoal / midnight black with champagne gold & brushed titanium trim)
+ * - Procedural woven textile + stitched edge + repeated "LUMINICA" branding texture following strap curvature
+ * - Multi-part brushed champagne gold & titanium metallic hardware (anchor, swivel clasp, split ring, card clip)
+ * - Verlet/spring pendulum physics with pointer/touch dragging, angular momentum, card flip, and responsive resize
+ * - Preserves exact Front & Back ID card image URLs and aspect proportions
  */
 
-import * as THREE from 'three';
-import RAPIER from '@dimforge/rapier3d-compat';
-import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+(function () {
+  "use strict";
 
-/* =========================================================================
- * CONFIG — every tunable lives here
- * ========================================================================= */
-const CONFIG = {
-  /* Card — portrait 1:1.4 */
-  card: {
-    width: 3,
-    height: 4.2,
-    thickness: 0.105,
-    cornerRadius: 0.18,
-    slotWidth: 0.72,
-    slotHeight: 0.2,
-    slotInset: 0.42,
-    clearcoat: 0.8,
-    roughness: 0.28,
-  },
+  const FRONT_IMAGE_URL =
+    "https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1bc02a650c14a95053c88a9166a1eb97.jpg";
+  const BACK_IMAGE_URL =
+    "https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1ad905ac00ce4dde1a796b5dcbc6060b.jpg";
 
-  /* Strap — premium woven textile */
-  strap: {
-    width: 0.72,
-    thickness: 0.038,
-    samples: 100,
-    tileWidths: 4,
-    roughness: 0.68,
-    text: 'LUMINICA  •  LUMINICA  •  LUMINICA  •  LUMINICA  •',
-  },
-
-  /* Physics */
-  physics: {
-    gravity: -40,
-    linearDamping: 0.85,
-    angularDamping: 1.8,
-    ropeSegments: 10,
-    ropeSegmentLength: 0.315,
-    claspLength: 0.50,
-    ropeDensity: 40,
-    claspDensity: 20,
-    cardDensity: 0.25,
-    solverIterations: 18,
-    maxPhysicsSteps: 5,
-    maxStepsMobile: 2,
-    fixedStep: 1 / 60,
-    swaySpeed: 0.9,
-    swayImpulse: 0.004,
-  },
-
-  /* Camera + renderer */
-  camera: {
-    fov: 24,
-    z: 26,
-    maxPixelRatio: 2,
-  },
-
-  /* Responsive layout */
-  layout: {
-    mobileMaxWidth: 767,
-    mobileCardWidth: 0.60,
-    mobileRight: 0.70,
-    desktopCardWidth: 0.25,
-    desktopRight: 0.72,
-    verticalBias: -0.25,
-    anchorMargin: 0.4,
-    fit: 0.94,
-  },
-
-  /* Interaction */
-  interaction: {
-    dragThresholdMouse: 6,
-    dragThresholdTouch: 10,
-    clickMaxMs: 300,
-    flipDuration: 600,
-    maxReleaseSpeed: 18,
-  },
-
-  /* Premium champagne-gold / charcoal palette */
-  colors: {
-    /* Strap base — deep charcoal with warm undertone */
-    strapBase:       '#1e1c1a',
-    strapMid:        '#2a2724',
-    strapHighlight:  '#c8a96a',   /* champagne gold text */
-    strapGoldStripe: '#b8963e',   /* woven gold thread stripe */
-    strapStitch:     '#d4b87a',   /* gold stitching */
-    strapBorder:     '#0f0e0c',   /* near-black edge */
-    strapSheen:      '#8b6f3a',   /* subtle sheen line */
-    /* Hardware */
-    metalGold:       0xcba050,    /* champagne gold hardware */
-    metalGoldDark:   0x8b6830,
-    cardEdge:        0x1a1816,
-    /* Lights */
-    key:             0xfff4e0,    /* warm white key light */
-    rim:             0x6080ff,
-    ambient:         0xfff8f0,
-  },
-
-  /* Original card images — UNCHANGED */
-  assets: {
-    front: 'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1bc02a650c14a95053c88a9166a1eb97.jpg',
-    back:  'https://raw.githubusercontent.com/x4vexecution/Image/refs/heads/main/1ad905ac00ce4dde1a796b5dcbc6060b.jpg',
-  },
-};
-
-/* =========================================================================
- * Public factory
- * ========================================================================= */
-export async function createLanyard(container) {
-  await RAPIER.init();
-
-  const {
-    card: CARD, strap: STRAP, physics: PHYS,
-    camera: CAM, layout: LAY, interaction: ACT,
-  } = CONFIG;
-  const W  = CARD.width;
-  const H  = CARD.height;
-  const T  = CARD.thickness;
-  const slotY   = H / 2 - CARD.slotInset;
-  const FACE_Z  = T / 2 + 0.016;
-  const RING_Z  = T / 2 + 0.045;
-  const CLASP_Z = T / 2 + 0.04;
-
-  const ropeLen     = PHYS.ropeSegments * PHYS.ropeSegmentLength;
-  const claspLen    = PHYS.claspLength;
-  const anchorToCard = ropeLen + claspLen + slotY;
-
-  /* ---- renderer ---------------------------------------------------------- */
-  const renderer = new THREE.WebGLRenderer({
-    alpha: true,
-    antialias: true,
-    powerPreference: 'high-performance',
-  });
-  renderer.setClearAlpha(0);
-  renderer.toneMapping = THREE.ACESFilmicToneMapping;
-  renderer.toneMappingExposure = 1.08;
-  const canvas = renderer.domElement;
-  container.appendChild(canvas);
-  const maxAniso = Math.min(4, renderer.capabilities.getMaxAnisotropy());
-
-  /* ---- scene / camera ---------------------------------------------------- */
-  const scene  = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(CAM.fov, 1, 0.1, 200);
-  camera.position.set(0, 0, CAM.z);
-  camera.lookAt(0, 0, 0);
-
-  const pmrem = new THREE.PMREMGenerator(renderer);
-  const room  = new RoomEnvironment();
-  const envRT = pmrem.fromScene(room, 0.04);
-  room.dispose();
-  scene.environment          = envRT.texture;
-  scene.environmentIntensity = 1.1;
-
-  scene.add(new THREE.AmbientLight(CONFIG.colors.ambient, 0.6));
-
-  const key = new THREE.DirectionalLight(CONFIG.colors.key, 2.8);
-  key.position.set(5, 9, 10);
-  scene.add(key);
-
-  const rim = new THREE.DirectionalLight(CONFIG.colors.rim, 1.4);
-  rim.position.set(-7, -3, -8);
-  scene.add(rim);
-
-  /* warm fill from below to lift the gold */
-  const fill = new THREE.PointLight(0xffcc66, 1.2, 60);
-  fill.position.set(0, -8, 6);
-  scene.add(fill);
-
-  /* ---- layout ------------------------------------------------------------ */
-  const root = new THREE.Group();
-  scene.add(root);
-
-  const reduceMotion = window.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false;
-  let introStart    = 0;
-  let introPlayed   = false;
-  let introDistance = 0;
-
-  const computeLayout = () => {
-    const w      = container.clientWidth  || 1;
-    const h      = container.clientHeight || 1;
-    const aspect = w / h;
-    const visibleH = 2 * Math.tan(THREE.MathUtils.degToRad(CAM.fov / 2)) * CAM.z;
-    const visibleW = visibleH * aspect;
-    const mobile   = w <= LAY.mobileMaxWidth;
-    const target   = mobile ? LAY.mobileCardWidth : LAY.desktopCardWidth;
-    let scale = (target * visibleW) / W;
-    scale = Math.min(scale, (LAY.fit * visibleH) / (ropeLen + claspLen + H));
-    const camX    = (0.5 - (mobile ? LAY.mobileRight : LAY.desktopRight)) * visibleW;
-    const anchorY = Math.max(
-      visibleH / 2 + LAY.anchorMargin,
-      LAY.verticalBias * visibleH + anchorToCard * scale,
-    );
-    return { w, h, aspect, visibleH, visibleW, scale, camX, anchorY };
+  const PALETTE = {
+    bgTop: "#090b10",
+    bgBottom: "#121622",
+    strapBase: "#161922",
+    strapDeep: "#0c0e14",
+    weaveLight: "#2a3040",
+    weaveDark: "#090a0f",
+    goldLight: "#f1d49c",
+    goldMid: "#c89d54",
+    goldDark: "#6e4f20",
+    titaniumLight: "#cfd6e0",
+    titaniumMid: "#8792a2",
+    titaniumDark: "#3c434f",
+    brandText: "#e6c382",
+    brandShadow: "rgba(6, 7, 10, 0.85)",
   };
 
-  let view = computeLayout();
-  introDistance = reduceMotion ? 0 : (view.visibleH / view.scale) * 0.72;
-  root.scale.setScalar(view.scale);
-  camera.aspect = view.aspect;
-  camera.updateProjectionMatrix();
-  camera.position.set(view.camX, 0, CAM.z);
-  camera.lookAt(view.camX, 0, 0);
+  function clamp(val, min, max) {
+    return Math.max(min, Math.min(max, val));
+  }
 
-  /* ---- textures ---------------------------------------------------------- */
-  const loader = new THREE.TextureLoader();
-  const loadTexture = (url) =>
-    new Promise((resolve) => {
-      loader.load(
-        url,
-        (tex) => {
-          tex.colorSpace = THREE.SRGBColorSpace;
-          tex.anisotropy = maxAniso;
-          const image       = tex.image;
-          const imageAspect = (image?.naturalWidth || image?.width  || 1) /
-                              (image?.naturalHeight || image?.height || 1);
-          const cardAspect  = W / H;
-          tex.wrapS = THREE.ClampToEdgeWrapping;
-          tex.wrapT = THREE.ClampToEdgeWrapping;
-          if (imageAspect > cardAspect) {
-            tex.repeat.x = cardAspect / imageAspect;
-            tex.offset.x = (1 - tex.repeat.x) / 2;
-          } else {
-            tex.repeat.y = imageAspect / cardAspect;
-            tex.offset.y = (1 - tex.repeat.y) / 2;
+  function lerp(a, b, t) {
+    return a + (b - a) * t;
+  }
+
+  /**
+   * Generates a seamless high-DPI woven textile canvas pattern with LUMINICA branding
+   * and stitched/metallic edge accents so the single continuous strap looks physically woven.
+   */
+  function createWovenStrapPattern(ctx) {
+    const patCanvas = document.createElement("canvas");
+    patCanvas.width = 256;
+    patCanvas.height = 96;
+    const pctx = patCanvas.getContext("2d");
+
+    // Base midnight charcoal gradient across strap width (y: 0..96)
+    const widthGrad = pctx.createLinearGradient(0, 0, 0, patCanvas.height);
+    widthGrad.addColorStop(0.0, "#0c0e14");
+    widthGrad.addColorStop(0.08, "#1b202c");
+    widthGrad.addColorStop(0.5, "#151822");
+    widthGrad.addColorStop(0.92, "#1b202c");
+    widthGrad.addColorStop(1.0, "#0c0e14");
+    pctx.fillStyle = widthGrad;
+    pctx.fillRect(0, 0, patCanvas.width, patCanvas.height);
+
+    // Fine warp & weft micro-weave grid
+    for (let y = 6; y < patCanvas.height - 6; y += 4) {
+      for (let x = 0; x < patCanvas.width; x += 4) {
+        const isWarp = ((x + y) >> 2) % 2 === 0;
+        pctx.fillStyle = isWarp
+          ? "rgba(215, 224, 238, 0.045)"
+          : "rgba(5, 6, 10, 0.28)";
+        pctx.fillRect(x, y, 3, 2);
+
+        // Subtle fiber sheen
+        if (((x * 7 + y * 13) & 15) === 0) {
+          pctx.fillStyle = "rgba(241, 212, 156, 0.06)";
+          pctx.fillRect(x + 1, y, 1, 1);
+        }
+      }
+    }
+
+    // Refined metallic champagne-gold & brushed titanium edge pinstripe
+    const edgeGrad = pctx.createLinearGradient(0, 0, 0, patCanvas.height);
+    edgeGrad.addColorStop(0.0, PALETTE.goldMid);
+    edgeGrad.addColorStop(0.035, PALETTE.goldLight);
+    edgeGrad.addColorStop(0.065, PALETTE.goldDark);
+    edgeGrad.addColorStop(0.075, "rgba(0,0,0,0)");
+    edgeGrad.addColorStop(0.925, "rgba(0,0,0,0)");
+    edgeGrad.addColorStop(0.935, PALETTE.goldDark);
+    edgeGrad.addColorStop(0.965, PALETTE.goldLight);
+    edgeGrad.addColorStop(1.0, PALETTE.goldMid);
+    pctx.fillStyle = edgeGrad;
+    pctx.fillRect(0, 0, patCanvas.width, patCanvas.height);
+
+    // Precision saddle-stitching along both edges
+    pctx.save();
+    pctx.strokeStyle = "rgba(230, 195, 130, 0.42)";
+    pctx.lineWidth = 1.25;
+    pctx.setLineDash([5, 4]);
+    pctx.beginPath();
+    pctx.moveTo(0, 9.5);
+    pctx.lineTo(patCanvas.width, 9.5);
+    pctx.moveTo(0, patCanvas.height - 9.5);
+    pctx.lineTo(patCanvas.width, patCanvas.height - 9.5);
+    pctx.stroke();
+    pctx.restore();
+
+    // Subtle integrated LUMINICA text woven into the textile repeat
+    pctx.save();
+    pctx.font = "600 11px 'Inter', 'Segoe UI', system-ui, sans-serif";
+    pctx.textAlign = "center";
+    pctx.textBaseline = "middle";
+    pctx.fillStyle = "rgba(241, 212, 156, 0.24)";
+    const labels = ["LUMINICA", "LUMINICA"];
+    labels.forEach((txt, idx) => {
+      const cx = idx === 0 ? 64 : 192;
+      const cy = patCanvas.height * 0.5;
+      pctx.fillText(txt.split("").join(" "), cx, cy + 0.6);
+      pctx.fillStyle = "rgba(255, 245, 220, 0.16)";
+      pctx.fillText(txt.split("").join(" "), cx, cy - 0.5);
+      pctx.fillStyle = "rgba(241, 212, 156, 0.24)";
+    });
+    pctx.restore();
+
+    return ctx.createPattern(patCanvas, "repeat");
+  }
+
+  class VerletNode {
+    constructor(x, y, pinned = false) {
+      this.x = x;
+      this.y = y;
+      this.oldX = x;
+      this.oldY = y;
+      this.pinned = pinned;
+    }
+
+    update(dt, gravityY, damping) {
+      if (this.pinned) return;
+      const vx = (this.x - this.oldX) * damping;
+      const vy = (this.y - this.oldY) * damping;
+      this.oldX = this.x;
+      this.oldY = this.y;
+      const dtSq = dt * dt;
+      this.x += vx;
+      this.y += vy + gravityY * dtSq;
+    }
+  }
+
+  class LuminicaLanyardApp {
+    constructor(container) {
+      this.container = container || document.body;
+      this.canvas = document.createElement("canvas");
+      this.canvas.className = "luminica-lanyard-canvas";
+      this.canvas.style.cssText = [
+        "display:block",
+        "width:100%",
+        "height:100%",
+        "touch-action:none",
+        "user-select:none",
+        "-webkit-user-select:none",
+        "cursor:grab",
+      ].join(";");
+      this.container.appendChild(this.canvas);
+      this.ctx = this.canvas.getContext("2d");
+
+      this.width = 0;
+      this.height = 0;
+      this.dpr = 1;
+      this.strapPattern = null;
+
+      // Images (strictly preserved URLs)
+      this.frontImg = new Image();
+      this.frontImg.crossOrigin = "anonymous";
+      this.frontImg.src = FRONT_IMAGE_URL;
+      this.frontLoaded = false;
+
+      this.backImg = new Image();
+      this.backImg.crossOrigin = "anonymous";
+      this.backImg.src = BACK_IMAGE_URL;
+      this.backLoaded = false;
+
+      this.frontImg.onload = () => {
+        this.frontLoaded = true;
+      };
+      this.backImg.onload = () => {
+        this.backLoaded = true;
+      };
+
+      // Physics chain: single continuous strap from anchor -> lower hardware ring
+      this.nodeCount = 16;
+      this.nodes = [];
+      this.segmentLength = 16;
+      this.strapWidth = 34;
+
+      // Card state
+      this.cardX = 0;
+      this.cardY = 0;
+      this.cardAngle = 0;
+      this.cardAngularVel = 0;
+      this.cardWidth = 230;
+      this.cardHeight = 350;
+
+      // Flip state: 0 = front, Math.PI = back
+      this.flipAngle = 0;
+      this.targetFlipAngle = 0;
+      this.isShowingBack = false;
+
+      // Interaction state
+      this.draggingTarget = null; // "card" | "strap" | null
+      this.dragOffsetX = 0;
+      this.dragOffsetY = 0;
+      this.pointerDownPos = { x: 0, y: 0 };
+      this.lastPointerPos = { x: 0, y: 0 };
+      this.lastPointerTime = 0;
+      this.pointerVel = { x: 0, y: 0 };
+      this.hoveredTarget = null;
+
+      // Animation loop
+      this.rafId = null;
+      this.lastFrameTime = performance.now();
+      this.elapsed = 0;
+
+      this._bindEvents();
+      this.resize(true);
+      this.start();
+    }
+
+    _bindEvents() {
+      this._onResize = () => this.resize(false);
+      this._onPointerDown = (e) => this.onPointerDown(e);
+      this._onPointerMove = (e) => this.onPointerMove(e);
+      this._onPointerUp = (e) => this.onPointerUp(e);
+      this._onKeyDown = (e) => {
+        if (e.key === "f" || e.key === "F" || e.key === " ") {
+          this.flipCard();
+        }
+      };
+
+      window.addEventListener("resize", this._onResize);
+      this.canvas.addEventListener("pointerdown", this._onPointerDown);
+      window.addEventListener("pointermove", this._onPointerMove);
+      window.addEventListener("pointerup", this._onPointerUp);
+      window.addEventListener("pointercancel", this._onPointerUp);
+      window.addEventListener("keydown", this._onKeyDown);
+    }
+
+    destroy() {
+      if (this.rafId) cancelAnimationFrame(this.rafId);
+      window.removeEventListener("resize", this._onResize);
+      this.canvas.removeEventListener("pointerdown", this._onPointerDown);
+      window.removeEventListener("pointermove", this._onPointerMove);
+      window.removeEventListener("pointerup", this._onPointerUp);
+      window.removeEventListener("pointercancel", this._onPointerUp);
+      window.removeEventListener("keydown", this._onKeyDown);
+      if (this.canvas.parentNode === this.container) {
+        this.container.removeChild(this.canvas);
+      }
+    }
+
+    resize(resetChain) {
+      const rect = this.container.getBoundingClientRect();
+      this.width = Math.max(320, rect.width || window.innerWidth);
+      this.height = Math.max(420, rect.height || window.innerHeight);
+      this.dpr = clamp(window.devicePixelRatio || 1, 1, 2);
+
+      this.canvas.width = Math.round(this.width * this.dpr);
+      this.canvas.height = Math.round(this.height * this.dpr);
+      this.ctx.setTransform(this.dpr, 0, 0, this.dpr, 0, 0);
+
+      if (!this.strapPattern) {
+        this.strapPattern = createWovenStrapPattern(this.ctx);
+      }
+
+      // Responsive card & strap sizing while keeping portrait ID card proportions (~0.64)
+      const scale = clamp(Math.min(this.width / 900, this.height / 760), 0.72, 1.25);
+      this.cardWidth = Math.round(224 * scale);
+      this.cardHeight = Math.round(350 * scale);
+      this.strapWidth = Math.round(34 * scale);
+
+      const totalStrapSpan = Math.min(this.height * 0.36, 265 * scale);
+      this.segmentLength = totalStrapSpan / (this.nodeCount - 1);
+
+      if (resetChain || this.nodes.length === 0) {
+        this._initChain();
+      } else {
+        this.nodes[0].x = this.width * 0.5;
+        this.nodes[0].y = 18;
+      }
+    }
+
+    _initChain() {
+      const anchorX = this.width * 0.5;
+      const anchorY = 18;
+      this.nodes = [];
+      for (let i = 0; i < this.nodeCount; i++) {
+        // Gentle organic initial curve
+        const sway = Math.sin((i / (this.nodeCount - 1)) * Math.PI) * 10;
+        const x = anchorX + sway;
+        const y = anchorY + i * this.segmentLength;
+        this.nodes.push(new VerletNode(x, y, i === 0));
+      }
+      const tail = this.nodes[this.nodes.length - 1];
+      this.cardX = tail.x;
+      this.cardY = tail.y + 42 + this.cardHeight * 0.5;
+      this.cardAngle = 0;
+      this.cardAngularVel = 0;
+    }
+
+    flipCard() {
+      this.isShowingBack = !this.isShowingBack;
+      this.targetFlipAngle = this.isShowingBack ? Math.PI : 0;
+      this.cardAngularVel += (this.isShowingBack ? 1 : -1) * 1.4;
+    }
+
+    _getPointerPos(e) {
+      const rect = this.canvas.getBoundingClientRect();
+      return {
+        x: e.clientX - rect.left,
+        y: e.clientY - rect.top,
+      };
+    }
+
+    _hitTest(x, y) {
+      // Check card bounds (centered at cardX, cardY with rotation cardAngle)
+      const dx = x - this.cardX;
+      const dy = y - this.cardY;
+      const cos = Math.cos(-this.cardAngle);
+      const sin = Math.sin(-this.cardAngle);
+      const localX = dx * cos - dy * sin;
+      const localY = dx * sin + dy * cos;
+
+      const halfW = this.cardWidth * 0.5 + 10;
+      const halfH = this.cardHeight * 0.5 + 24;
+      if (Math.abs(localX) <= halfW && Math.abs(localY) <= halfH) {
+        return "card";
+      }
+
+      // Check continuous strap nodes
+      for (let i = 1; i < this.nodes.length; i++) {
+        const n = this.nodes[i];
+        const dist = Math.hypot(x - n.x, y - n.y);
+        if (dist <= this.strapWidth * 0.75) {
+          return "strap";
+        }
+      }
+
+      return null;
+    }
+
+    onPointerDown(e) {
+      if (e.button !== undefined && e.button !== 0 && e.pointerType === "mouse") {
+        return;
+      }
+      const pos = this._getPointerPos(e);
+      this.pointerDownPos = { ...pos };
+      this.lastPointerPos = { ...pos };
+      this.lastPointerTime = performance.now();
+      this.pointerVel = { x: 0, y: 0 };
+
+      const hit = this._hitTest(pos.x, pos.y);
+      if (hit) {
+        this.draggingTarget = hit;
+        this.dragOffsetX = this.cardX - pos.x;
+        this.dragOffsetY = this.cardY - pos.y;
+        this.canvas.style.cursor = "grabbing";
+        if (this.canvas.setPointerCapture && e.pointerId !== undefined) {
+          try {
+            this.canvas.setPointerCapture(e.pointerId);
+          } catch (_) {}
+        }
+      }
+    }
+
+    onPointerMove(e) {
+      const pos = this._getPointerPos(e);
+      const now = performance.now();
+      const dtSec = Math.max(0.008, (now - this.lastPointerTime) / 1000);
+
+      this.pointerVel.x = (pos.x - this.lastPointerPos.x) / dtSec;
+      this.pointerVel.y = (pos.y - this.lastPointerPos.y) / dtSec;
+      this.lastPointerPos = { ...pos };
+      this.lastPointerTime = now;
+
+      if (!this.draggingTarget) {
+        const hover = this._hitTest(pos.x, pos.y);
+        if (hover !== this.hoveredTarget) {
+          this.hoveredTarget = hover;
+          this.canvas.style.cursor = hover ? "grab" : "default";
+        }
+        return;
+      }
+
+      if (this.draggingTarget === "card") {
+        const targetCardX = pos.x + this.dragOffsetX;
+        const targetCardY = pos.y + this.dragOffsetY;
+
+        // Constrain maximum reach from top anchor so strap never snaps unnaturally
+        const anchor = this.nodes[0];
+        const maxReach = this.nodeCount * this.segmentLength + this.cardHeight * 0.55;
+        const vx = targetCardX - anchor.x;
+        const vy = targetCardY - anchor.y;
+        const dist = Math.hypot(vx, vy) || 1;
+        if (dist > maxReach) {
+          const ratio = maxReach / dist;
+          this.cardX = anchor.x + vx * ratio;
+          this.cardY = anchor.y + vy * ratio;
+        } else {
+          this.cardX = targetCardX;
+          this.cardY = targetCardY;
+        }
+
+        // Tilt card naturally with horizontal drag velocity
+        const targetTilt = clamp(this.pointerVel.x * 0.00035, -0.55, 0.55);
+        this.cardAngle = lerp(this.cardAngle, targetTilt, 0.28);
+
+        // Pull lower strap node toward top clip mount of the card
+        const clipMount = this._getCardClipWorldPos();
+        const tail = this.nodes[this.nodes.length - 1];
+        tail.x = lerp(tail.x, clipMount.x, 0.75);
+        tail.y = lerp(tail.y, clipMount.y - 26, 0.75);
+        tail.oldX = tail.x - this.pointerVel.x * 0.012;
+        tail.oldY = tail.y - this.pointerVel.y * 0.012;
+      } else if (this.draggingTarget === "strap") {
+        const midIdx = Math.floor(this.nodeCount * 0.55);
+        const node = this.nodes[midIdx];
+        node.x = pos.x;
+        node.y = pos.y;
+        node.oldX = pos.x - this.pointerVel.x * 0.012;
+        node.oldY = pos.y - this.pointerVel.y * 0.012;
+      }
+    }
+
+    onPointerUp(e) {
+      if (!this.draggingTarget) return;
+      const pos = this._getPointerPos(e);
+      const moveDist = Math.hypot(
+        pos.x - this.pointerDownPos.x,
+        pos.y - this.pointerDownPos.y
+      );
+
+      if (this.draggingTarget === "card") {
+        // Add release momentum
+        const tail = this.nodes[this.nodes.length - 1];
+        tail.oldX = tail.x - clamp(this.pointerVel.x, -900, 900) * 0.018;
+        tail.oldY = tail.y - clamp(this.pointerVel.y, -900, 900) * 0.018;
+        this.cardAngularVel += clamp(this.pointerVel.x * 0.004, -5.5, 5.5);
+
+        // Quick tap/click on card flips front/back
+        if (moveDist < 7) {
+          this.flipCard();
+        }
+      }
+
+      this.draggingTarget = null;
+      this.canvas.style.cursor = this.hoveredTarget ? "grab" : "default";
+    }
+
+    _getCardClipWorldPos() {
+      const topOffset = -(this.cardHeight * 0.5 + 14);
+      const sin = Math.sin(this.cardAngle);
+      const cos = Math.cos(this.cardAngle);
+      return {
+        x: this.cardX - topOffset * sin,
+        y: this.cardY + topOffset * cos,
+      };
+    }
+
+    _stepPhysics(dt) {
+      const subSteps = 4;
+      const subDt = dt / subSteps;
+      const gravityY = 980;
+      const damping = 0.992;
+
+      // Pin top ceiling anchor
+      const anchor = this.nodes[0];
+      anchor.x = this.width * 0.5;
+      anchor.y = 18;
+      anchor.oldX = anchor.x;
+      anchor.oldY = anchor.y;
+
+      for (let s = 0; s < subSteps; s++) {
+        for (let i = 1; i < this.nodes.length; i++) {
+          this.nodes[i].update(subDt, gravityY, damping);
+        }
+
+        // Distance constraints along single continuous strap
+        for (let iter = 0; iter < 5; iter++) {
+          anchor.x = this.width * 0.5;
+          anchor.y = 18;
+
+          for (let i = 0; i < this.nodes.length - 1; i++) {
+            const a = this.nodes[i];
+            const b = this.nodes[i + 1];
+            const dx = b.x - a.x;
+            const dy = b.y - a.y;
+            const dist = Math.hypot(dx, dy) || 0.0001;
+            const diff = (dist - this.segmentLength) / dist;
+
+            if (a.pinned && !b.pinned) {
+              b.x -= dx * diff;
+              b.y -= dy * diff;
+            } else if (!a.pinned && b.pinned) {
+              a.x += dx * diff;
+              a.y += dy * diff;
+            } else if (!a.pinned && !b.pinned) {
+              a.x += dx * diff * 0.5;
+              a.y += dy * diff * 0.5;
+              b.x -= dx * diff * 0.5;
+              b.y -= dy * diff * 0.5;
+            }
           }
-          tex.needsUpdate = true;
-          resolve(tex);
-        },
-        undefined,
-        () => resolve(null),
+        }
+      }
+
+      // Couple card position & pendulum rotation smoothly to the lower hardware ring
+      const tail = this.nodes[this.nodes.length - 1];
+      const prev = this.nodes[this.nodes.length - 2];
+      const strapDirX = tail.x - prev.x;
+      const strapDirY = tail.y - prev.y;
+      const strapSlopeAngle = Math.atan2(strapDirX, Math.max(4, strapDirY));
+
+      const hardwareDrop = 46;
+      const desiredCardX = tail.x + Math.sin(strapSlopeAngle) * (this.cardHeight * 0.45);
+      const desiredCardY = tail.y + hardwareDrop + this.cardHeight * 0.5;
+
+      if (this.draggingTarget !== "card") {
+        this.cardX = lerp(this.cardX, desiredCardX, 0.26);
+        this.cardY = lerp(this.cardY, desiredCardY, 0.26);
+
+        // Spring-damper rotational pendulum toward strap slope
+        const springK = 26;
+        const rotDamping = 5.4;
+        const angleDiff = strapSlopeAngle * 0.72 - this.cardAngle;
+        const angularAcc = angleDiff * springK - this.cardAngularVel * rotDamping;
+        this.cardAngularVel += angularAcc * dt;
+        this.cardAngle += this.cardAngularVel * dt;
+      }
+
+      // Smoothly animate front/back flip angle
+      this.flipAngle = lerp(this.flipAngle, this.targetFlipAngle, clamp(dt * 9.5, 0, 1));
+    }
+
+    _drawBackground() {
+      const ctx = this.ctx;
+      const grad = ctx.createLinearGradient(0, 0, 0, this.height);
+      grad.addColorStop(0, PALETTE.bgTop);
+      grad.addColorStop(0.55, "#0d1018");
+      grad.addColorStop(1, PALETTE.bgBottom);
+      ctx.fillStyle = grad;
+      ctx.fillRect(0, 0, this.width, this.height);
+
+      // Subtle warm champagne ambient spotlight behind the ID card
+      const glow = ctx.createRadialGradient(
+        this.cardX,
+        this.cardY - 30,
+        20,
+        this.cardX,
+        this.cardY,
+        Math.max(this.width, this.height) * 0.55
       );
-    });
-
-  const [frontTex, backTex] = await Promise.all([
-    loadTexture(CONFIG.assets.front),
-    loadTexture(CONFIG.assets.back),
-  ]);
-
-  const frontMap  = frontTex || makeLabelTexture('FRONT', maxAniso);
-  const backMap   = backTex  || makeLabelTexture('BACK',  maxAniso);
-  const { map: strapMap, normalMap: strapNormal, tileLength } = makeStrapTextures(maxAniso);
-
-  /* ---- card meshes ------------------------------------------------------- */
-  const cardGroup = new THREE.Group();
-  root.add(cardGroup);
-
-  const flipGroup = new THREE.Group();
-  cardGroup.add(flipGroup);
-
-  const edgeMat = new THREE.MeshPhysicalMaterial({
-    color:              CONFIG.colors.cardEdge,
-    roughness:          CARD.roughness,
-    metalness:          0.08,
-    clearcoat:          CARD.clearcoat,
-    clearcoatRoughness: 0.15,
-  });
-
-  const faceMat = (map) => new THREE.MeshPhysicalMaterial({
-    color:              0xffffff,
-    map,
-    roughness:          CARD.roughness,
-    metalness:          0.02,
-    clearcoat:          CARD.clearcoat,
-    clearcoatRoughness: 0.2,
-  });
-
-  const coreGeo = new THREE.ExtrudeGeometry(
-    roundedShape(W, H, CARD.cornerRadius, slotY, CARD),
-    {
-      depth: T,
-      bevelEnabled: true,
-      bevelThickness: 0.012,
-      bevelSize:      0.012,
-      bevelSegments:  2,
-      curveSegments:  10,
-      steps:          1,
-    },
-  );
-  coreGeo.translate(0, 0, -T / 2);
-
-  const faceGeo = new THREE.ShapeGeometry(
-    roundedShape(W - 0.1, H - 0.1, CARD.cornerRadius - 0.03, slotY, CARD), 10,
-  );
-  normalizeShapeUV(faceGeo, W - 0.1, H - 0.1);
-
-  const coreMesh  = new THREE.Mesh(coreGeo,  edgeMat);
-  const frontMesh = new THREE.Mesh(faceGeo,  faceMat(frontMap));
-  frontMesh.position.z = FACE_Z;
-  const backMesh  = new THREE.Mesh(faceGeo,  faceMat(backMap));
-  backMesh.position.z  = -FACE_Z;
-  backMesh.rotation.y  =  Math.PI;
-  flipGroup.add(coreMesh, frontMesh, backMesh);
-
-  /* ---- premium gold hardware -------------------------------------------- */
-
-  /* Champagne-gold physical material, used for all hardware */
-  const goldMat = new THREE.MeshPhysicalMaterial({
-    color:              CONFIG.colors.metalGold,
-    metalness:          0.96,
-    roughness:          0.18,
-    clearcoat:          0.6,
-    clearcoatRoughness: 0.1,
-    envMapIntensity:    1.8,
-    reflectivity:       0.9,
-  });
-
-  /* Darker gold for recessed areas */
-  const goldDarkMat = new THREE.MeshPhysicalMaterial({
-    color:              CONFIG.colors.metalGoldDark,
-    metalness:          0.92,
-    roughness:          0.28,
-    envMapIntensity:    1.4,
-  });
-
-  /* Grommet — precision-machined slot reinforcement */
-  const grommetShape = roundedShape(CARD.slotWidth + 0.1, CARD.slotHeight + 0.1, 0.08, 0, CARD);
-  grommetShape.holes.length = 0;
-  grommetShape.holes.push(
-    roundedPath(new THREE.Path(), 0, 0, CARD.slotWidth, CARD.slotHeight, 0.08),
-  );
-  const grommetGeo = new THREE.ExtrudeGeometry(grommetShape, {
-    depth: T + 0.04,
-    bevelEnabled: true,
-    bevelThickness: 0.008,
-    bevelSize:      0.008,
-    bevelSegments:  3,
-    curveSegments:  12,
-  });
-  grommetGeo.translate(0, slotY, -(T + 0.04) / 2);
-  cardGroup.add(new THREE.Mesh(grommetGeo, goldMat));
-
-  /* Split ring — finely machined torus, two offset coils */
-  const ringGeo = new THREE.TorusGeometry(0.12, 0.022, 10, 32);
-  const ringA   = new THREE.Mesh(ringGeo, goldMat);
-  ringA.position.set(0, slotY, RING_Z);
-  ringA.rotation.x = 0.18;
-  const ringB   = new THREE.Mesh(ringGeo, goldMat);
-  ringB.position.set(0, slotY, -RING_Z + 0.01);
-  ringB.rotation.x = -0.18;
-  cardGroup.add(ringA, ringB);
-
-  /* Crimp ferrule — precision-pressed strap terminator */
-  const crimpGroup = new THREE.Group();
-  const crimpShape  = new THREE.Shape();
-  roundedPath(crimpShape, 0, 0, 0.78, 0.44, 0.1);
-  const crimpGeo = new THREE.ExtrudeGeometry(crimpShape, {
-    depth: 0.18,
-    bevelEnabled: true,
-    bevelThickness: 0.025,
-    bevelSize:      0.025,
-    bevelSegments:  3,
-    curveSegments:  10,
-  });
-  crimpGeo.translate(0, 0, -0.09);
-  crimpGroup.add(new THREE.Mesh(crimpGeo, goldMat));
-
-  /* Rivets */
-  const rivetGeo = new THREE.CylinderGeometry(0.034, 0.034, 0.038, 12).rotateX(Math.PI / 2);
-  for (const y of [0.11, -0.11]) {
-    const rivet = new THREE.Mesh(rivetGeo, goldDarkMat);
-    rivet.position.set(0, y, 0.1);
-    crimpGroup.add(rivet);
-  }
-
-  /* Decorative chamfer ring around crimp body */
-  const chamferGeo = new THREE.TorusGeometry(0.26, 0.012, 6, 28);
-  const chamferMesh = new THREE.Mesh(chamferGeo, goldMat);
-  chamferMesh.rotation.x = Math.PI / 2;
-  chamferMesh.position.z = 0.09;
-  crimpGroup.add(chamferMesh);
-
-  root.add(crimpGroup);
-
-  /* Swivel clasp — refined lobster-claw connector */
-  const claspGroup = new THREE.Group();
-
-  /* Eye — oval split ring at card end */
-  const eye = new THREE.Mesh(new THREE.TorusGeometry(0.082, 0.024, 10, 24), goldMat);
-  eye.position.y = -claspLen / 2 + 0.075;
-
-  /* Top ring — connects clasp body to strap crimp */
-  const topRing = new THREE.Mesh(new THREE.TorusGeometry(0.062, 0.021, 10, 24), goldMat);
-  topRing.position.y = claspLen / 2 - 0.028;
-
-  /* Clasp body — smooth tapered shank */
-  const shankCurve = new THREE.CatmullRomCurve3([
-    new THREE.Vector3(0,  -claspLen / 2 + 0.14, 0),
-    new THREE.Vector3(0,  -0.08, 0.016),
-    new THREE.Vector3(0,   0.08, 0.020),
-    new THREE.Vector3(0,   claspLen / 2 - 0.05, 0),
-  ]);
-  const shank = new THREE.Mesh(
-    new THREE.TubeGeometry(shankCurve, 24, 0.028, 10, false),
-    goldMat,
-  );
-
-  /* Spring gate */
-  const gate = new THREE.Mesh(
-    new THREE.TubeGeometry(
-      new THREE.CatmullRomCurve3([
-        new THREE.Vector3( 0.022, -claspLen / 2 + 0.13, 0.034),
-        new THREE.Vector3( 0.084, -claspLen / 2 + 0.075, 0.022),
-        new THREE.Vector3( 0.056, -claspLen / 2 + 0.022, 0),
-      ]),
-      10, 0.015, 8, false,
-    ),
-    goldDarkMat,
-  );
-
-  /* Pivot pin */
-  const pivotGeo  = new THREE.CylinderGeometry(0.016, 0.016, 0.065, 10);
-  const pivotMesh = new THREE.Mesh(pivotGeo, goldMat);
-  pivotMesh.position.set(0.072, -claspLen / 2 + 0.075, 0.016);
-  pivotMesh.rotation.z = Math.PI / 2;
-
-  claspGroup.add(eye, topRing, shank, gate, pivotMesh);
-  root.add(claspGroup);
-
-  /* ---- strap ribbon (thick hex cross-section, parallel-transport) -------- */
-  const SAMPLES     = STRAP.samples;
-  const RIBBON_VERTS = SAMPLES * 6;
-  const posArr = new Float32Array(RIBBON_VERTS * 3);
-  const nrmArr = new Float32Array(RIBBON_VERTS * 3);
-  const uvArr  = new Float32Array(RIBBON_VERTS * 2);
-  const indices = [];
-  for (let i = 0; i < SAMPLES - 1; i++) {
-    for (let j = 0; j < 6; j++) {
-      const a = i * 6 + j;
-      const b = i * 6 + ((j + 1) % 6);
-      const c = (i + 1) * 6 + j;
-      const d = (i + 1) * 6 + ((j + 1) % 6);
-      indices.push(a, b, c, b, d, c);
-    }
-  }
-  const strapGeo = new THREE.BufferGeometry();
-  strapGeo.setAttribute('position', new THREE.BufferAttribute(posArr, 3));
-  strapGeo.setAttribute('normal',   new THREE.BufferAttribute(nrmArr, 3));
-  strapGeo.setAttribute('uv',       new THREE.BufferAttribute(uvArr,  2));
-  strapGeo.setIndex(indices);
-
-  const strapMat = new THREE.MeshStandardMaterial({
-    map:          strapMap,
-    normalMap:    strapNormal,
-    normalScale:  new THREE.Vector2(0.55, 0.55),
-    roughness:    STRAP.roughness,
-    metalness:    0.0,
-    side:         THREE.DoubleSide,
-  });
-  const strapMesh = new THREE.Mesh(strapGeo, strapMat);
-  strapMesh.frustumCulled = false;
-  root.add(strapMesh);
-
-  /* ---- physics ----------------------------------------------------------- */
-  const world = new RAPIER.World({ x: 0, y: PHYS.gravity, z: 0 });
-  world.timestep           = PHYS.fixedStep;
-  world.numSolverIterations = PHYS.solverIterations;
-
-  let anchorLocal = view.anchorY / view.scale;
-
-  const anchorBody = world.createRigidBody(
-    RAPIER.RigidBodyDesc.fixed().setTranslation(0, anchorLocal, 0),
-  );
-
-  const L = PHYS.ropeSegmentLength;
-  const ropeBodies = [];
-  for (let i = 0; i < PHYS.ropeSegments; i++) {
-    const body = world.createRigidBody(
-      RAPIER.RigidBodyDesc.dynamic()
-        .setTranslation(0, anchorLocal - L * (i + 0.5), 0)
-        .setLinearDamping(PHYS.linearDamping)
-        .setAngularDamping(PHYS.angularDamping),
-    );
-    world.createCollider(RAPIER.ColliderDesc.ball(0.05).setDensity(PHYS.ropeDensity), body);
-    ropeBodies.push(body);
-  }
-
-  const spherical = (a, b, anchorA, anchorB) =>
-    world.createImpulseJoint(RAPIER.JointData.spherical(anchorA, anchorB), a, b, true);
-
-  spherical(anchorBody, ropeBodies[0], { x: 0, y: 0, z: 0 }, { x: 0, y: L / 2, z: 0 });
-  for (let i = 1; i < ropeBodies.length; i++) {
-    spherical(
-      ropeBodies[i - 1], ropeBodies[i],
-      { x: 0, y: -L / 2, z: 0 }, { x: 0, y: L / 2, z: 0 },
-    );
-  }
-
-  const crimpBody  = ropeBodies[ropeBodies.length - 1];
-  const claspBody  = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(0, anchorLocal - ropeLen - claspLen / 2, 0)
-      .setLinearDamping(PHYS.linearDamping)
-      .setAngularDamping(PHYS.angularDamping)
-      .enabledRotations(false, false, true),
-  );
-  world.createCollider(
-    RAPIER.ColliderDesc.ball(0.045).setDensity(PHYS.claspDensity).setSensor(true),
-    claspBody,
-  );
-  spherical(crimpBody, claspBody, { x: 0, y: -L / 2, z: 0 }, { x: 0, y: claspLen / 2, z: 0 });
-
-  const cardBody = world.createRigidBody(
-    RAPIER.RigidBodyDesc.dynamic()
-      .setTranslation(0, anchorLocal - anchorToCard, 0)
-      .setLinearDamping(PHYS.linearDamping)
-      .setAngularDamping(PHYS.angularDamping)
-      .enabledRotations(false, false, true),
-  );
-  world.createCollider(
-    RAPIER.ColliderDesc.cuboid(W / 2, H / 2, T / 2).setDensity(PHYS.cardDensity),
-    cardBody,
-  );
-  spherical(claspBody, cardBody, { x: 0, y: -claspLen / 2, z: 0 }, { x: 0, y: slotY, z: 0 });
-
-  /* ---- invisible safety walls ------------------------------------------- */
-  const makeWall = (hx, hy, hz) => {
-    const body = world.createRigidBody(RAPIER.RigidBodyDesc.fixed());
-    world.createCollider(RAPIER.ColliderDesc.cuboid(hx, hy, hz), body);
-    return body;
-  };
-  const wallLeft   = makeWall(0.1, 500, 500);
-  const wallRight  = makeWall(0.1, 500, 500);
-  const wallBottom = makeWall(500, 0.1, 500);
-
-  const dragBounds = { minX: 0, maxX: 0, minY: 0, maxY: 0, minZ: -3, maxZ: 3 };
-
-  const updateWalls = () => {
-    wallLeft.setTranslation(  { x: -100, y: 0, z: 0 }, true);
-    wallRight.setTranslation(  { x:  100, y: 0, z: 0 }, true);
-    wallBottom.setTranslation({ x:    0, y: -100, z: 0 }, true);
-    dragBounds.minX = -80; dragBounds.maxX = 80;
-    dragBounds.minY = -80; dragBounds.maxY = 80;
-  };
-  updateWalls();
-
-  /* ---- simulation state -------------------------------------------------- */
-  const cardPos        = new THREE.Vector3();
-  const cardQuat       = new THREE.Quaternion();
-  const prevCardPos    = new THREE.Vector3();
-  const prevCardQuat   = new THREE.Quaternion();
-  const claspPos       = new THREE.Vector3();
-  const claspQuat      = new THREE.Quaternion();
-  const prevClaspPos   = new THREE.Vector3();
-  const prevClaspQuat  = new THREE.Quaternion();
-  const ropePos        = ropeBodies.map(() => new THREE.Vector3());
-  const prevRope       = ropeBodies.map(() => new THREE.Vector3());
-
-  const readBodies = () => {
-    const p = cardBody.translation();
-    const q = cardBody.rotation();
-    cardPos.set(p.x, p.y, p.z);
-    cardQuat.set(q.x, q.y, q.z, q.w);
-    const cp = claspBody.translation();
-    const cq = claspBody.rotation();
-    claspPos.set(cp.x, cp.y, cp.z);
-    claspQuat.set(cq.x, cq.y, cq.z, cq.w);
-    ropeBodies.forEach((body, i) => {
-      const rp = body.translation();
-      ropePos[i].set(rp.x, rp.y, rp.z);
-    });
-  };
-
-  readBodies();
-  prevCardPos.copy(cardPos);
-  prevCardQuat.copy(cardQuat);
-  prevClaspPos.copy(claspPos);
-  prevClaspQuat.copy(claspQuat);
-  ropePos.forEach((p, i) => prevRope[i].copy(p));
-
-  /* ---- strap geometry update -------------------------------------------- */
-  const curvePoints = [
-    new THREE.Vector3(),
-    new THREE.Vector3(),
-    ...ropeBodies.map(() => new THREE.Vector3()),
-  ];
-  const curve    = new THREE.CatmullRomCurve3(curvePoints, false, 'catmullrom', 0.5);
-  const tmpPoint = new THREE.Vector3();
-  const tmpPrev  = new THREE.Vector3();
-  const tmpTan   = new THREE.Vector3();
-  const prevTan  = new THREE.Vector3();
-  const tmpSide  = new THREE.Vector3();
-  const tmpNrm   = new THREE.Vector3();
-  const frameQ   = new THREE.Quaternion();
-  const endTangent = new THREE.Vector3(0, -1, 0);
-  const UP_AXIS    = new THREE.Vector3(0, 1, 0);
-  const strapEndDir = new THREE.Vector3();
-
-  /* Hexagonal cross-section — flat-sided woven ribbon shape */
-  const hw = STRAP.width / 2;
-  const ht = STRAP.thickness / 2;
-  const e  = ht * 0.9;
-  const XS = [
-    [-hw,       0],
-    [-hw + e,  -ht],
-    [ hw - e,  -ht],
-    [ hw,       0],
-    [ hw - e,   ht],
-    [-hw + e,   ht],
-  ];
-  const V = [0, 0.06, 0.94, 1, 0.94, 0.06];
-
-  let strapTwist   = 0;
-  let strapStretch = 0;
-
-  const updateStrap = (alpha) => {
-    curvePoints[0].set(0, anchorLocal + 1.6, 0);
-    curvePoints[1].set(0, anchorLocal, 0);
-    for (let i = 0; i < ropeBodies.length; i++) {
-      curvePoints[i + 2].lerpVectors(prevRope[i], ropePos[i], alpha);
+      glow.addColorStop(0, "rgba(214, 174, 106, 0.11)");
+      glow.addColorStop(0.5, "rgba(92, 112, 148, 0.05)");
+      glow.addColorStop(1, "rgba(0, 0, 0, 0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, this.width, this.height);
     }
 
-    let length = 0;
-    for (let i = 0; i < SAMPLES; i++) {
-      const t = i / (SAMPLES - 1);
-      curve.getPoint(t, tmpPoint);
-      curve.getTangent(t, tmpTan);
+    /**
+     * Renders ONE single continuous woven strap ribbon along the physics chain
+     * with realistic thickness, edge lighting, and repeated LUMINICA branding.
+     */
+    _drawContinuousStrap() {
+      const ctx = this.ctx;
+      if (this.nodes.length < 2) return;
 
-      if (i === 0) {
-        tmpNrm.set(0, 0, 1).addScaledVector(tmpTan, -tmpTan.z);
-        if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(1, 0, 0);
-        tmpNrm.normalize();
+      const leftPts = [];
+      const rightPts = [];
+      const centers = [];
+
+      for (let i = 0; i < this.nodes.length; i++) {
+        const curr = this.nodes[i];
+        const prev = this.nodes[Math.max(0, i - 1)];
+        const next = this.nodes[Math.min(this.nodes.length - 1, i + 1)];
+
+        const tx = next.x - prev.x;
+        const ty = next.y - prev.y;
+        const len = Math.hypot(tx, ty) || 1;
+        // Normal perpendicular to tangent
+        const nx = -ty / len;
+        const ny = tx / len;
+
+        // Slight perspective foreshortening along strap swing
+        const halfW = this.strapWidth * 0.5;
+        centers.push({ x: curr.x, y: curr.y, tx: tx / len, ty: ty / len, nx, ny });
+        leftPts.push({ x: curr.x + nx * halfW, y: curr.y + ny * halfW });
+        rightPts.push({ x: curr.x - nx * halfW, y: curr.y - ny * halfW });
+      }
+
+      // Drop shadow under continuous strap
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(leftPts[0].x + 6, leftPts[0].y + 10);
+      for (let i = 1; i < leftPts.length; i++) {
+        ctx.lineTo(leftPts[i].x + 6, leftPts[i].y + 10);
+      }
+      for (let i = rightPts.length - 1; i >= 0; i--) {
+        ctx.lineTo(rightPts[i].x + 6, rightPts[i].y + 10);
+      }
+      ctx.closePath();
+      ctx.fillStyle = "rgba(0, 0, 0, 0.45)";
+      ctx.filter = "blur(8px)";
+      ctx.fill();
+      ctx.restore();
+
+      // Main continuous strap body with woven pattern
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(leftPts[0].x, leftPts[0].y);
+      for (let i = 1; i < leftPts.length; i++) {
+        ctx.lineTo(leftPts[i].x, leftPts[i].y);
+      }
+      for (let i = rightPts.length - 1; i >= 0; i--) {
+        ctx.lineTo(rightPts[i].x, rightPts[i].y);
+      }
+      ctx.closePath();
+
+      ctx.fillStyle = this.strapPattern || PALETTE.strapBase;
+      ctx.fill();
+
+      // Clip to strap ribbon for edge trim & curved LUMINICA branding
+      ctx.clip();
+
+      // Champagne gold & brushed titanium trim along left/right strap edges
+      ctx.strokeStyle = PALETTE.goldMid;
+      ctx.lineWidth = 2.2;
+      ctx.beginPath();
+      leftPts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.stroke();
+
+      ctx.strokeStyle = PALETTE.titaniumLight;
+      ctx.lineWidth = 1.1;
+      ctx.beginPath();
+      rightPts.forEach((p, idx) => (idx === 0 ? ctx.moveTo(p.x, p.y) : ctx.lineTo(p.x, p.y)));
+      ctx.stroke();
+
+      // Render LUMINICA branding aligned along the strap centerline
+      this._drawCurvedStrapBranding(centers);
+
+      ctx.restore();
+    }
+
+    _drawCurvedStrapBranding(centers) {
+      const ctx = this.ctx;
+      // Compute cumulative arc length along strap
+      const arcDist = [0];
+      for (let i = 1; i < centers.length; i++) {
+        const d = Math.hypot(
+          centers[i].x - centers[i - 1].x,
+          centers[i].y - centers[i - 1].y
+        );
+        arcDist.push(arcDist[i - 1] + d);
+      }
+      const totalLen = arcDist[arcDist.length - 1];
+      if (totalLen < 40) return;
+
+      const label = "L U M I N I C A";
+      const spacing = 92;
+      const fontSize = clamp(Math.round(this.strapWidth * 0.34), 9, 13);
+
+      ctx.save();
+      ctx.font = `700 ${fontSize}px 'Inter', 'Segoe UI', system-ui, sans-serif`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+
+      for (let dist = 48; dist < totalLen - 26; dist += spacing) {
+        // Find segment containing `dist`
+        let idx = 0;
+        while (idx < arcDist.length - 2 && arcDist[idx + 1] < dist) {
+          idx++;
+        }
+        const segLen = Math.max(0.001, arcDist[idx + 1] - arcDist[idx]);
+        const t = clamp((dist - arcDist[idx]) / segLen, 0, 1);
+
+        const cA = centers[idx];
+        const cB = centers[idx + 1];
+        const px = lerp(cA.x, cB.x, t);
+        const py = lerp(cA.y, cB.y, t);
+        const tx = lerp(cA.tx, cB.tx, t);
+        const ty = lerp(cA.ty, cB.ty, t);
+        const angle = Math.atan2(ty, tx);
+
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(angle);
+
+        // Subtle recessed weave shadow + champagne gold embossed typography
+        ctx.fillStyle = PALETTE.brandShadow;
+        ctx.fillText(label, 0.8, 1.0);
+        ctx.fillStyle = "rgba(241, 212, 156, 0.72)";
+        ctx.fillText(label, 0, 0);
+        ctx.restore();
+      }
+      ctx.restore();
+    }
+
+    _drawMetallicHardware() {
+      const ctx = this.ctx;
+      const anchor = this.nodes[0];
+      const tail = this.nodes[this.nodes.length - 1];
+      const prev = this.nodes[this.nodes.length - 2];
+
+      // 1. Top ceiling/neck anchor mount (Brushed Titanium & Champagne Gold)
+      ctx.save();
+      ctx.translate(anchor.x, anchor.y - 6);
+      const topGrad = ctx.createLinearGradient(-26, -10, 26, 12);
+      topGrad.addColorStop(0, PALETTE.titaniumDark);
+      topGrad.addColorStop(0.35, PALETTE.titaniumLight);
+      topGrad.addColorStop(0.65, PALETTE.goldMid);
+      topGrad.addColorStop(1, PALETTE.titaniumDark);
+
+      ctx.fillStyle = topGrad;
+      ctx.strokeStyle = PALETTE.goldLight;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.roundRect(-24, -10, 48, 18, 6);
+      ctx.fill();
+      ctx.stroke();
+
+      // Center precision screw accent
+      ctx.fillStyle = "#12151d";
+      ctx.beginPath();
+      ctx.arc(0, -1, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+
+      // 2. Lower Strap-to-Card Metallic Clasp, Split Ring & Clip Assembly
+      const slopeAngle = Math.atan2(tail.x - prev.x, Math.max(4, tail.y - prev.y));
+      ctx.save();
+      ctx.translate(tail.x, tail.y);
+      ctx.rotate(-slopeAngle);
+
+      // Strap end-crimp collar (Champagne Gold)
+      const collarGrad = ctx.createLinearGradient(-22, -6, 22, 10);
+      collarGrad.addColorStop(0, PALETTE.goldDark);
+      collarGrad.addColorStop(0.3, PALETTE.goldLight);
+      collarGrad.addColorStop(0.6, PALETTE.goldMid);
+      collarGrad.addColorStop(1, PALETTE.goldDark);
+
+      ctx.fillStyle = collarGrad;
+      ctx.beginPath();
+      ctx.roundRect(-20, -6, 40, 14, 4);
+      ctx.fill();
+
+      // Swivel barrel housing (Brushed Titanium)
+      const barrelGrad = ctx.createLinearGradient(-10, 8, 10, 24);
+      barrelGrad.addColorStop(0, PALETTE.titaniumDark);
+      barrelGrad.addColorStop(0.45, PALETTE.titaniumLight);
+      barrelGrad.addColorStop(1, PALETTE.titaniumDark);
+
+      ctx.fillStyle = barrelGrad;
+      ctx.beginPath();
+      ctx.roundRect(-8, 8, 16, 15, 3);
+      ctx.fill();
+
+      // Split ring (Champagne Gold)
+      ctx.strokeStyle = PALETTE.goldLight;
+      ctx.lineWidth = 3.2;
+      ctx.beginPath();
+      ctx.arc(0, 30, 8.5, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = PALETTE.goldDark;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(0, 30, 10.2, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Card jaw / clip connecting ring into top slot of ID card
+      const clipGrad = ctx.createLinearGradient(-11, 38, 11, 56);
+      clipGrad.addColorStop(0, PALETTE.goldMid);
+      clipGrad.addColorStop(0.5, PALETTE.goldLight);
+      clipGrad.addColorStop(1, PALETTE.goldDark);
+
+      ctx.fillStyle = clipGrad;
+      ctx.beginPath();
+      ctx.roundRect(-9, 38, 18, 16, 4);
+      ctx.fill();
+
+      ctx.restore();
+    }
+
+    _drawIdCard() {
+      const ctx = this.ctx;
+      const hw = this.cardWidth * 0.5;
+      const hh = this.cardHeight * 0.5;
+      const radius = 14;
+
+      // Cosine of flipAngle controls horizontal perspective width & which face is visible
+      const cosFlip = Math.cos(this.flipAngle);
+      const scaleX = Math.max(0.03, Math.abs(cosFlip));
+      const showBack = cosFlip < 0;
+
+      ctx.save();
+      ctx.translate(this.cardX, this.cardY);
+      ctx.rotate(this.cardAngle);
+
+      // Card drop shadow
+      ctx.save();
+      ctx.translate(8, 14);
+      ctx.scale(scaleX, 1);
+      ctx.fillStyle = "rgba(0, 0, 0, 0.55)";
+      ctx.filter = "blur(14px)";
+      ctx.beginPath();
+      ctx.roundRect(-hw, -hh, this.cardWidth, this.cardHeight, radius);
+      ctx.fill();
+      ctx.restore();
+
+      // Apply 2.5D horizontal flip scale
+      ctx.scale(scaleX, 1);
+
+      // Card outer metallic/chamfered frame
+      ctx.beginPath();
+      ctx.roundRect(-hw, -hh, this.cardWidth, this.cardHeight, radius);
+      ctx.fillStyle = "#141720";
+      ctx.fill();
+
+      // Clip inside rounded card face
+      ctx.save();
+      ctx.clip();
+
+      const img = showBack ? this.backImg : this.frontImg;
+      const loaded = showBack ? this.backLoaded : this.frontLoaded;
+
+      if (loaded && img.naturalWidth > 0 && img.naturalHeight > 0) {
+        // Fit image cleanly preserving aspect ratio without cropping/distorting
+        const imgAspect = img.naturalWidth / img.naturalHeight;
+        const boxAspect = this.cardWidth / this.cardHeight;
+
+        let drawW = this.cardWidth;
+        let drawH = this.cardHeight;
+        if (imgAspect > boxAspect) {
+          drawH = this.cardWidth / imgAspect;
+        } else {
+          drawW = this.cardHeight * imgAspect;
+        }
+
+        ctx.fillStyle = "#0e1118";
+        ctx.fillRect(-hw, -hh, this.cardWidth, this.cardHeight);
+        ctx.drawImage(img, -drawW * 0.5, -drawH * 0.5, drawW, drawH);
       } else {
-        frameQ.setFromUnitVectors(prevTan, tmpTan);
-        tmpNrm.applyQuaternion(frameQ);
-        tmpNrm.addScaledVector(tmpTan, -tmpNrm.dot(tmpTan));
-        if (tmpNrm.lengthSq() < 1e-6) tmpNrm.set(0, 0, 1);
-        tmpNrm.normalize();
+        // Clean placeholder while original asset loads
+        ctx.fillStyle = "#181d29";
+        ctx.fillRect(-hw, -hh, this.cardWidth, this.cardHeight);
+        ctx.fillStyle = PALETTE.goldLight;
+        ctx.font = "600 13px 'Inter', system-ui, sans-serif";
+        ctx.textAlign = "center";
+        ctx.fillText("LUMINICA ID", 0, -6);
+        ctx.fillStyle = "rgba(255,255,255,0.55)";
+        ctx.font = "400 11px 'Inter', system-ui, sans-serif";
+        ctx.fillText(showBack ? "Loading back..." : "Loading front...", 0, 14);
       }
-      if (Math.abs(strapTwist) > 1e-5) {
-        tmpNrm.applyAxisAngle(tmpTan, strapTwist * t);
-      }
-      tmpSide.crossVectors(tmpNrm, tmpTan).normalize();
-      prevTan.copy(tmpTan);
 
-      if (i > 0) length += tmpPoint.distanceTo(tmpPrev);
-      tmpPrev.copy(tmpPoint);
+      // Subtle glass/metallic sheen across card surface
+      const sheen = ctx.createLinearGradient(-hw, -hh, hw, hh);
+      sheen.addColorStop(0, "rgba(255, 246, 224, 0.14)");
+      sheen.addColorStop(0.45, "rgba(255, 255, 255, 0.02)");
+      sheen.addColorStop(1, "rgba(10, 12, 18, 0.22)");
+      ctx.fillStyle = sheen;
+      ctx.fillRect(-hw, -hh, this.cardWidth, this.cardHeight);
 
-      const u = length / tileLength;
-      for (let j = 0; j < 6; j++) {
-        const o  = (i * 6 + j) * 3;
-        const x  = XS[j][0] * (1 + strapStretch * 0.14);
-        const y  = XS[j][1];
-        posArr[o]     = tmpPoint.x + tmpSide.x * x + tmpNrm.x * y;
-        posArr[o + 1] = tmpPoint.y + tmpSide.y * x + tmpNrm.y * y;
-        posArr[o + 2] = tmpPoint.z + tmpSide.z * x + tmpNrm.z * y;
+      ctx.restore();
 
-        const nx = tmpSide.x * x + tmpNrm.x * y;
-        const ny = tmpSide.y * x + tmpNrm.y * y;
-        const nz = tmpSide.z * x + tmpNrm.z * y;
-        const nl = Math.hypot(nx, ny, nz) || 1;
-        nrmArr[o]     = nx / nl;
-        nrmArr[o + 1] = ny / nl;
-        nrmArr[o + 2] = nz / nl;
+      // Precision champagne-gold & brushed edge border
+      ctx.strokeStyle = "rgba(225, 190, 124, 0.55)";
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.roundRect(-hw + 0.5, -hh + 0.5, this.cardWidth - 1, this.cardHeight - 1, radius);
+      ctx.stroke();
 
-        const uvO = (i * 6 + j) * 2;
-        uvArr[uvO]     = u;
-        uvArr[uvO + 1] = V[j];
-      }
-    }
-    endTangent.copy(tmpTan);
+      // Top slot punch cutout
+      ctx.fillStyle = "#090b10";
+      ctx.beginPath();
+      ctx.roundRect(-22, -hh + 10, 44, 7, 3.5);
+      ctx.fill();
+      ctx.strokeStyle = PALETTE.goldMid;
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
-    strapGeo.attributes.position.needsUpdate = true;
-    strapGeo.attributes.normal.needsUpdate   = true;
-    strapGeo.attributes.uv.needsUpdate       = true;
-  };
-
-  /* ---- flip -------------------------------------------------------------- */
-  const flip = { active: false, from: 0, to: 0, start: 0, front: true };
-
-  const startFlip = () => {
-    if (flip.active) return;
-    flip.from  = flipGroup.rotation.y;
-    flip.to    = flip.front ? Math.PI : 0;
-    flip.front = !flip.front;
-    flip.active = true;
-    flip.start  = performance.now();
-  };
-
-  /* ---- animation loop --------------------------------------------------- */
-  let rafId       = 0;
-  let running     = false;
-  let lastTime    = 0;
-  let accumulator = 0;
-  let simTime     = 0;
-  let dragging    = false;
-
-  const stepPhysics = () => {
-    simTime += PHYS.fixedStep;
-    if (!dragging) {
-      strapTwist *= 0.9975;
-      const sway = Math.sin(simTime * PHYS.swaySpeed) * 0.9
-                 + Math.sin(simTime * 1.7 + 1.3) * 0.4;
-      cardBody.applyImpulse({ x: sway * PHYS.swayImpulse, y: 0, z: 0 }, true);
-      cardBody.applyTorqueImpulse({ x: 0, y: 0, z: Math.sin(simTime * 0.6) * 0.0015 }, true);
-    }
-    prevCardPos.copy(cardPos);
-    prevCardQuat.copy(cardQuat);
-    prevClaspPos.copy(claspPos);
-    prevClaspQuat.copy(claspQuat);
-    for (let i = 0; i < ropeBodies.length; i++) prevRope[i].copy(ropePos[i]);
-    world.step();
-    readBodies();
-  };
-
-  const render = (alpha, now) => {
-    cardGroup.position.lerpVectors(prevCardPos, cardPos, alpha);
-    cardGroup.quaternion.slerpQuaternions(prevCardQuat, cardQuat, alpha);
-
-    claspGroup.position.lerpVectors(prevClaspPos, claspPos, alpha);
-    claspGroup.position.z += CLASP_Z;
-    claspGroup.quaternion.slerpQuaternions(prevClaspQuat, claspQuat, alpha);
-
-    if (flip.active) {
-      const t = Math.min((now - flip.start) / ACT.flipDuration, 1);
-      flipGroup.rotation.y = flip.from + (flip.to - flip.from) * easeInOutCubic(t);
-      if (t >= 1) flip.active = false;
+      ctx.restore();
     }
 
-    updateStrap(alpha);
-
-    strapEndDir.copy(endTangent).negate();
-    crimpGroup.position.copy(curvePoints[curvePoints.length - 1])
-      .addScaledVector(strapEndDir, 0.07);
-    crimpGroup.quaternion.setFromUnitVectors(UP_AXIS, strapEndDir);
-
-    if (introStart > 0 && introDistance > 0) {
-      const elapsed  = (now - introStart) / 1000;
-      const duration = 1.65;
-      if (elapsed < duration) {
-        const t = elapsed / duration;
-        root.position.y = introDistance * Math.exp(-5.2 * t) * Math.cos(8.2 * t);
-      } else {
-        root.position.y = 0;
-        introStart = 0;
-      }
+    render() {
+      this._drawBackground();
+      this._drawContinuousStrap();
+      this._drawMetallicHardware();
+      this._drawIdCard();
     }
 
-    renderer.render(scene, camera);
-  };
+    start() {
+      const tick = (now) => {
+        const rawDt = (now - this.lastFrameTime) / 1000;
+        this.lastFrameTime = now;
+        const dt = clamp(rawDt, 0.001, 0.033);
+        this.elapsed += dt;
 
-  const tick = (now) => {
-    rafId = requestAnimationFrame(tick);
-    const dt = Math.min((now - lastTime) / 1000, 0.1);
-    lastTime = now;
-    accumulator += dt;
-    const maxSteps = view.w <= LAY.mobileMaxWidth ? PHYS.maxStepsMobile : PHYS.maxPhysicsSteps;
-    let steps = 0;
-    while (accumulator >= PHYS.fixedStep && steps < maxSteps) {
-      stepPhysics();
-      accumulator -= PHYS.fixedStep;
-      steps++;
-    }
-    if (steps === maxSteps) accumulator = 0;
-    render(accumulator / PHYS.fixedStep, now);
-  };
+        this._stepPhysics(dt);
+        this.render();
 
-  const start = () => {
-    if (running) return;
-    running     = true;
-    accumulator = 0;
-    lastTime    = performance.now();
-    if (!introPlayed) {
-      introPlayed = true;
-      if (introDistance > 0) {
-        root.position.y = introDistance;
-        introStart = lastTime;
-      }
-    }
-    rafId = requestAnimationFrame(tick);
-  };
-
-  const stop = () => {
-    if (!running) return;
-    running = false;
-    cancelAnimationFrame(rafId);
-    rafId = 0;
-  };
-
-  /* ---- resize ------------------------------------------------------------ */
-  const applyLayout = () => {
-    const next = computeLayout();
-    renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, CAM.maxPixelRatio));
-    renderer.setSize(next.w, next.h, false);
-    camera.aspect = next.aspect;
-    camera.updateProjectionMatrix();
-    camera.position.set(next.camX, 0, CAM.z);
-    camera.lookAt(next.camX, 0, 0);
-    root.scale.setScalar(next.scale);
-
-    const prevAnchorLocal = anchorLocal;
-    view        = next;
-    anchorLocal = next.anchorY / next.scale;
-
-    const desiredCardY = anchorLocal - anchorToCard;
-    const shift = desiredCardY - cardBody.translation().y;
-    if (Math.abs(shift) > 1e-4 || Math.abs(anchorLocal - prevAnchorLocal) > 1e-4) {
-      anchorBody.setTranslation({ x: 0, y: anchorLocal, z: 0 }, true);
-      for (const body of [...ropeBodies, claspBody, cardBody]) {
-        const p = body.translation();
-        body.setTranslation({ x: p.x, y: p.y + shift, z: p.z }, true);
-      }
-    }
-    updateWalls();
-  };
-
-  applyLayout();
-  const ro = new ResizeObserver(applyLayout);
-  ro.observe(container);
-
-  /* ---- pointer interaction ----------------------------------------------- */
-  const raycaster     = new THREE.Raycaster();
-  const pointer       = new THREE.Vector2();
-  const camDir        = new THREE.Vector3();
-  const dragPlane     = new THREE.Plane();
-  const planeHit      = new THREE.Vector3();
-  const worldCardPos  = new THREE.Vector3();
-  const dragOffset    = new THREE.Vector3();
-  const dragTarget    = new THREE.Vector3();
-  const prevDragTarget = new THREE.Vector3();
-  const dragVel       = new THREE.Vector3();
-  const tmpVel        = new THREE.Vector3();
-  const tmpWorld      = new THREE.Vector3();
-
-  let pointerId         = null;
-  let pressX            = 0;
-  let pressY            = 0;
-  let pressTime         = 0;
-  let moved             = false;
-  let lastDragTime      = 0;
-  let lastPointerX      = 0;
-  let lastPointerY      = 0;
-  let dragTwistVelocity = 0;
-
-  const setPointer = (clientX, clientY) => {
-    const r = canvas.getBoundingClientRect();
-    pointer.x =  ((clientX - r.left) / r.width)  * 2 - 1;
-    pointer.y = -((clientY - r.top)  / r.height)  * 2 + 1;
-  };
-
-  const hitCard = (clientX, clientY) => {
-    setPointer(clientX, clientY);
-    scene.updateMatrixWorld();
-    raycaster.setFromCamera(pointer, camera);
-    strapGeo.computeBoundingSphere();
-    return raycaster.intersectObjects([coreMesh, strapMesh], false).length > 0;
-  };
-
-  const beginDrag = (e) => {
-    dragging = true;
-    moved    = true;
-    canvas.classList.add('is-grabbing');
-    canvas.setPointerCapture(e.pointerId);
-    cardGroup.updateWorldMatrix(true, false);
-    cardGroup.getWorldPosition(worldCardPos);
-    camera.getWorldDirection(camDir);
-    dragPlane.setFromNormalAndCoplanarPoint(camDir, worldCardPos);
-    lastPointerX = e.clientX;
-    lastPointerY = e.clientY;
-    setPointer(e.clientX, e.clientY);
-    raycaster.setFromCamera(pointer, camera);
-    if (raycaster.ray.intersectPlane(dragPlane, planeHit)) {
-      dragOffset.copy(worldCardPos).sub(planeHit);
-    } else {
-      dragOffset.set(0, 0, 0);
-    }
-    dragTarget.copy(cardPos);
-    prevDragTarget.copy(cardPos);
-    dragVel.set(0, 0, 0);
-    lastDragTime      = performance.now();
-    lastPointerX      = e.clientX;
-    lastPointerY      = e.clientY;
-    dragTwistVelocity = 0;
-    cardBody.setBodyType(RAPIER.RigidBodyType.KinematicPositionBased, true);
-    strapStretch = 0;
-  };
-
-  const endDrag = () => {
-    if (!dragging) return;
-    dragging = false;
-    canvas.classList.remove('is-grabbing');
-    if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
-      canvas.releasePointerCapture(pointerId);
-    }
-    pointerId = null;
-    canvas.style.touchAction = '';
-    tmpVel.copy(dragVel);
-    if (tmpVel.length() > ACT.maxReleaseSpeed) tmpVel.setLength(ACT.maxReleaseSpeed);
-    cardBody.setBodyType(RAPIER.RigidBodyType.Dynamic, true);
-    cardBody.setLinvel({ x: tmpVel.x, y: tmpVel.y, z: tmpVel.z }, true);
-    dragTwistVelocity *= 0.35;
-    cardBody.setAngvel({ x: 0, y: 0, z: THREE.MathUtils.clamp(-tmpVel.x * 0.12, -2, 2) }, true);
-    strapStretch = 0;
-    ropeBodies.forEach((body) => body.wakeUp());
-    claspBody.wakeUp();
-  };
-
-  const onPointerDown = (e) => {
-    if (dragging || (e.pointerType === 'mouse' && e.button !== 0)) return;
-    if (!hitCard(e.clientX, e.clientY)) return;
-    e.preventDefault();
-    pointerId = e.pointerId;
-    canvas.setPointerCapture(pointerId);
-    if (e.pointerType === 'touch') canvas.style.touchAction = 'none';
-    pressX    = e.clientX;
-    pressY    = e.clientY;
-    pressTime = performance.now();
-    moved     = false;
-  };
-
-  const onPointerMove = (e) => {
-    if (pointerId === null) {
-      if (e.pointerType !== 'touch') {
-        canvas.classList.toggle('is-hovering', hitCard(e.clientX, e.clientY));
-      }
-      return;
-    }
-    if (e.pointerId !== pointerId) return;
-    const threshold = e.pointerType === 'touch' ? ACT.dragThresholdTouch : ACT.dragThresholdMouse;
-    if (!dragging) {
-      if (Math.hypot(e.clientX - pressX, e.clientY - pressY) < threshold) return;
-      beginDrag(e);
-    }
-
-    const pointerDeltaX = e.clientX - lastPointerX;
-    const pointerDeltaY = e.clientY - lastPointerY;
-    lastPointerX = e.clientX;
-    lastPointerY = e.clientY;
-
-    dragTwistVelocity = THREE.MathUtils.clamp(
-      dragTwistVelocity * 0.72 + (pointerDeltaX - pointerDeltaY * 0.22) * 0.012,
-      -0.16, 0.16,
-    );
-    strapTwist = THREE.MathUtils.clamp(
-      strapTwist + dragTwistVelocity, -Math.PI * 0.72, Math.PI * 0.72,
-    );
-    if (Math.abs(dragTwistVelocity) > 0.0001) {
-      cardBody.applyTorqueImpulse(
-        { x: 0, y: dragTwistVelocity * 0.018, z: -dragTwistVelocity * 0.012 }, true,
-      );
-    }
-
-    setPointer(e.clientX, e.clientY);
-    raycaster.setFromCamera(pointer, camera);
-    if (!raycaster.ray.intersectPlane(dragPlane, planeHit)) return;
-
-    tmpWorld.copy(planeHit).add(dragOffset);
-    root.worldToLocal(tmpWorld);
-
-    dragTarget.set(
-      THREE.MathUtils.clamp(tmpWorld.x, -80, 80),
-      THREE.MathUtils.clamp(tmpWorld.y, -80, anchorLocal + 80),
-      THREE.MathUtils.clamp(tmpWorld.z, -12, 12),
-    );
-
-    const fromAnchor = dragTarget.clone().sub(new THREE.Vector3(0, anchorLocal, 0));
-    const distance   = fromAnchor.length();
-    const maxReach   = anchorToCard * 0.995;
-    if (distance > maxReach) {
-      fromAnchor.setLength(maxReach);
-      dragTarget.set(fromAnchor.x, anchorLocal + fromAnchor.y, fromAnchor.z);
-    }
-    const tension = THREE.MathUtils.clamp(
-      (Math.min(distance, maxReach) / maxReach - 0.62) / 0.38, 0, 1,
-    );
-    strapStretch = THREE.MathUtils.damp(strapStretch, tension, 12, 1 / 60);
-    cardBody.setNextKinematicTranslation(dragTarget);
-
-    const now = performance.now();
-    const dt  = Math.max((now - lastDragTime) / 1000, 1 / 120);
-    tmpVel.copy(dragTarget).sub(prevDragTarget).divideScalar(dt);
-    dragVel.lerp(tmpVel, 0.35);
-    prevDragTarget.copy(dragTarget);
-    lastDragTime = now;
-  };
-
-  const onPointerUp = (e) => {
-    if (e.pointerId !== pointerId) return;
-    const wasDragging = dragging;
-    if (wasDragging) {
-      endDrag();
-    } else {
-      if (pointerId !== null && canvas.hasPointerCapture(pointerId)) {
-        canvas.releasePointerCapture(pointerId);
-      }
-      pointerId = null;
-      canvas.style.touchAction = '';
-      if (!moved && performance.now() - pressTime < ACT.clickMaxMs) startFlip();
-    }
-  };
-
-  const onPointerCancel = (e) => {
-    if (e.pointerId !== pointerId) return;
-    if (dragging) endDrag();
-    else { pointerId = null; canvas.style.touchAction = ''; }
-  };
-
-  const onTouchMove = (e) => { if (dragging) e.preventDefault(); };
-
-  canvas.addEventListener('pointerdown',   onPointerDown);
-  canvas.addEventListener('pointermove',   onPointerMove);
-  canvas.addEventListener('pointerup',     onPointerUp);
-  canvas.addEventListener('pointercancel', onPointerCancel);
-  canvas.addEventListener('touchmove',     onTouchMove, { passive: false });
-
-  /* initial kick */
-  cardBody.applyImpulse({ x: 0.3, y: 0, z: 0 }, true);
-
-  /* ---- visibility / pause ----------------------------------------------- */
-  let visible = false;
-  let hidden  = document.hidden;
-  const sync  = () => (visible && !hidden ? start() : stop());
-
-  const io = new IntersectionObserver(
-    (entries) => { visible = entries[0].isIntersecting; sync(); },
-    { threshold: 0 },
-  );
-  io.observe(container);
-
-  const onVisibility = () => { hidden = document.hidden; sync(); };
-  document.addEventListener('visibilitychange', onVisibility);
-
-  /* ---- destroy ----------------------------------------------------------- */
-  const destroy = () => {
-    stop();
-    io.disconnect();
-    ro.disconnect();
-    document.removeEventListener('visibilitychange', onVisibility);
-    canvas.removeEventListener('pointerdown',   onPointerDown);
-    canvas.removeEventListener('pointermove',   onPointerMove);
-    canvas.removeEventListener('pointerup',     onPointerUp);
-    canvas.removeEventListener('pointercancel', onPointerCancel);
-    canvas.removeEventListener('touchmove',     onTouchMove);
-    world.free();
-    scene.traverse((obj) => {
-      if (obj.geometry) obj.geometry.dispose();
-      const mats = Array.isArray(obj.material) ? obj.material
-        : obj.material ? [obj.material] : [];
-      mats.forEach((m) => {
-        if (m.map)       m.map.dispose();
-        if (m.normalMap) m.normalMap.dispose();
-        m.dispose();
-      });
-    });
-    envRT.dispose();
-    pmrem.dispose();
-    renderer.dispose();
-    canvas.remove();
-    if (window.lanyard?.destroy === destroy) window.lanyard = null;
-  };
-
-  return { destroy };
-}
-
-/* =========================================================================
- * Procedural textures — premium woven textile, LUMINICA branding only
- * ========================================================================= */
-function makeStrapTextures(maxAniso) {
-  const h          = 512;
-  const w          = h * CONFIG.strap.tileWidths;
-  const tileLength = CONFIG.strap.width * CONFIG.strap.tileWidths;
-
-  /* ----- color map -------------------------------------------------------- */
-  const map = document.createElement('canvas');
-  map.width  = w;
-  map.height = h;
-  const g = map.getContext('2d');
-
-  /* ---- base gradient: deep charcoal with subtle warm gradient */
-  const baseGrad = g.createLinearGradient(0, 0, 0, h);
-  baseGrad.addColorStop(0,    CONFIG.colors.strapBorder);
-  baseGrad.addColorStop(0.08, CONFIG.colors.strapBase);
-  baseGrad.addColorStop(0.5,  CONFIG.colors.strapMid);
-  baseGrad.addColorStop(0.92, CONFIG.colors.strapBase);
-  baseGrad.addColorStop(1,    CONFIG.colors.strapBorder);
-  g.fillStyle = baseGrad;
-  g.fillRect(0, 0, w, h);
-
-  /* ---- woven diagonal warp threads (fine) */
-  for (let x = -h; x < w + h; x += 6) {
-    g.strokeStyle = 'rgba(60,55,48,0.22)';
-    g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x + h, h); g.stroke();
-
-    g.strokeStyle = 'rgba(255,245,220,0.045)';
-    g.lineWidth = 1;
-    g.beginPath(); g.moveTo(x + 2, 0); g.lineTo(x + 2 + h, h); g.stroke();
-  }
-  /* weft cross threads */
-  for (let x = -h; x < w + h; x += 6) {
-    g.strokeStyle = 'rgba(20,18,15,0.18)';
-    g.lineWidth = 1.5;
-    g.beginPath(); g.moveTo(x, 0); g.lineTo(x - h, h); g.stroke();
-  }
-  /* horizontal weft rows */
-  for (let y = 0; y < h; y += 3) {
-    const alpha = (y % 6 === 0) ? 0.045 : 0.012;
-    g.fillStyle = `rgba(255,245,220,${alpha})`;
-    g.fillRect(0, y, w, 1);
-  }
-
-  /* ---- gold woven stripe pair — 3 stripes symmetrically placed */
-  const stripeYs = [0.14, 0.5, 0.86];
-  const stripeW  = Math.round(h * 0.028);
-  for (const fy of stripeYs) {
-    const sy = Math.round(h * fy - stripeW / 2);
-    const goldGrad = g.createLinearGradient(0, sy, 0, sy + stripeW);
-    goldGrad.addColorStop(0,    'rgba(100,78,20,0.7)');
-    goldGrad.addColorStop(0.3,  CONFIG.colors.strapGoldStripe);
-    goldGrad.addColorStop(0.5,  CONFIG.colors.strapHighlight);
-    goldGrad.addColorStop(0.7,  CONFIG.colors.strapGoldStripe);
-    goldGrad.addColorStop(1,    'rgba(100,78,20,0.7)');
-    g.fillStyle = goldGrad;
-    g.fillRect(0, sy, w, stripeW);
-
-    /* weave pattern over the gold stripe */
-    for (let x = -h; x < w + h; x += 6) {
-      g.strokeStyle = 'rgba(0,0,0,0.25)';
-      g.lineWidth = 1;
-      g.beginPath(); g.moveTo(x, sy); g.lineTo(x + stripeW, sy + stripeW); g.stroke();
+        this.rafId = requestAnimationFrame(tick);
+      };
+      this.rafId = requestAnimationFrame(tick);
     }
   }
 
-  /* ---- dark border stripe — precise edge banding */
-  const border = Math.round(h * 0.045);
-  g.fillStyle = CONFIG.colors.strapBorder;
-  g.fillRect(0, 0, w, border);
-  g.fillRect(0, h - border, w, border);
-
-  /* thin gold edge line */
-  g.fillStyle = CONFIG.colors.strapGoldStripe;
-  g.fillRect(0, border, w, 2);
-  g.fillRect(0, h - border - 2, w, 2);
-
-  /* ---- stitching — dual-thread gold */
-  g.setLineDash([Math.round(h * 0.045), Math.round(h * 0.038)]);
-  g.lineWidth = 2.5;
-  for (const fy of [0.065, 0.935]) {
-    const gy = h * fy;
-    const stitchGrad = g.createLinearGradient(0, gy - 2, 0, gy + 2);
-    stitchGrad.addColorStop(0, CONFIG.colors.strapStitch);
-    stitchGrad.addColorStop(1, CONFIG.colors.strapGoldStripe);
-    g.strokeStyle = stitchGrad;
-    g.globalAlpha = 0.72;
-    g.beginPath(); g.moveTo(0, gy); g.lineTo(w, gy); g.stroke();
-  }
-  g.setLineDash([]);
-  g.globalAlpha = 1;
-
-  /* ---- LUMINICA text — single brand, elegant spacing */
-  g.save();
-  g.translate(w / 2, h / 2);
-  g.textAlign    = 'center';
-  g.textBaseline = 'middle';
-
-  const family = '"Trebuchet MS", "Arial Narrow", "Helvetica Neue", Arial, sans-serif';
-  let size = Math.round(h * 0.28);
-  g.font = `800 ${size}px ${family}`;
-  const textW = g.measureText(CONFIG.strap.text).width;
-  if (textW > w * 0.92) {
-    size = Math.round(size * ((w * 0.92) / textW));
-    g.font = `800 ${size}px ${family}`;
-  }
-
-  /* subtle shadow under text for textile depth */
-  g.shadowColor   = 'rgba(0,0,0,0.6)';
-  g.shadowBlur    = 4;
-  g.shadowOffsetY = 2;
-
-  /* text fill: soft champagne gradient */
-  const textGrad = g.createLinearGradient(0, -size / 2, 0, size / 2);
-  textGrad.addColorStop(0,   CONFIG.colors.strapHighlight);
-  textGrad.addColorStop(0.4, '#e8ca88');
-  textGrad.addColorStop(0.6, CONFIG.colors.strapGoldStripe);
-  textGrad.addColorStop(1,   CONFIG.colors.strapSheen);
-  g.fillStyle = textGrad;
-  g.fillText(CONFIG.strap.text, 0, 0);
-
-  g.shadowBlur = 0; g.shadowOffsetY = 0;
-  g.restore();
-
-  /* ----- normal map ------------------------------------------------------- */
-  const nrm = document.createElement('canvas');
-  nrm.width  = w;
-  nrm.height = h;
-  const ng = nrm.getContext('2d');
-
-  ng.fillStyle = '#8080ff';
-  ng.fillRect(0, 0, w, h);
-
-  /* warp direction ridges */
-  for (let x = -h; x < w + h; x += 6) {
-    ng.strokeStyle = 'rgba(255,140,255,0.3)';
-    ng.lineWidth = 1.5;
-    ng.beginPath(); ng.moveTo(x, 0); ng.lineTo(x + h, h); ng.stroke();
-    ng.strokeStyle = 'rgba(0,120,255,0.28)';
-    ng.lineWidth = 1.5;
-    ng.beginPath(); ng.moveTo(x, 0); ng.lineTo(x - h, h); ng.stroke();
-  }
-  /* horizontal weft bump rows */
-  for (let y = 0; y < h; y += 3) {
-    if (y % 6 === 0) {
-      ng.strokeStyle = 'rgba(255,180,255,0.18)';
-      ng.lineWidth = 1;
-      ng.beginPath(); ng.moveTo(0, y); ng.lineTo(w, y); ng.stroke();
+  function initLuminicaLanyard() {
+    const mountEl =
+      document.getElementById("luminica-lanyard-root") ||
+      document.querySelector("[data-luminica-lanyard]") ||
+      document.body;
+    if (window.__luminicaLanyardInstance) {
+      window.__luminicaLanyardInstance.destroy();
     }
+    window.__luminicaLanyardInstance = new LuminicaLanyardApp(mountEl);
   }
-  /* raised border edges */
-  ng.fillStyle = 'rgba(255,160,255,0.45)';
-  ng.fillRect(0, border, w, 3);
-  ng.fillRect(0, h - border - 3, w, 3);
 
-  /* ----- Three.js textures ----------------------------------------------- */
-  const mapTex = new THREE.CanvasTexture(map);
-  mapTex.colorSpace = THREE.SRGBColorSpace;
-  mapTex.wrapS      = THREE.RepeatWrapping;
-  mapTex.wrapT      = THREE.ClampToEdgeWrapping;
-  mapTex.anisotropy = maxAniso;
-
-  const nrmTex = new THREE.CanvasTexture(nrm);
-  nrmTex.wrapS      = THREE.RepeatWrapping;
-  nrmTex.wrapT      = THREE.ClampToEdgeWrapping;
-  nrmTex.anisotropy = maxAniso;
-
-  return { map: mapTex, normalMap: nrmTex, tileLength };
-}
-
-/* Fallback face label when image fails to load */
-function makeLabelTexture(label, maxAniso) {
-  const c = document.createElement('canvas');
-  c.width  = 512;
-  c.height = 716;
-  const g = c.getContext('2d');
-  g.fillStyle = '#1a1816';
-  g.fillRect(0, 0, c.width, c.height);
-  g.strokeStyle = 'rgba(200,169,106,0.4)';
-  g.lineWidth = 10;
-  g.strokeRect(20, 20, c.width - 40, c.height - 40);
-  g.fillStyle = '#c8a96a';
-  g.font = '700 72px "Trebuchet MS", Arial, sans-serif';
-  g.textAlign    = 'center';
-  g.textBaseline = 'middle';
-  g.fillText(label, c.width / 2, c.height / 2);
-  const tex = new THREE.CanvasTexture(c);
-  tex.colorSpace = THREE.SRGBColorSpace;
-  tex.anisotropy = maxAniso;
-  return tex;
-}
-
-/* =========================================================================
- * Helpers
- * ========================================================================= */
-function easeInOutCubic(t) {
-  return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
-}
-
-function roundedShape(w, h, r, slotY, card) {
-  const shape = new THREE.Shape();
-  roundedPath(shape, 0, 0, w, h, r);
-  shape.holes.push(
-    roundedPath(new THREE.Path(), 0, slotY, card.slotWidth, card.slotHeight, card.slotHeight / 2),
-  );
-  return shape;
-}
-
-function roundedPath(path, cx, cy, w, h, r) {
-  const x  = cx - w / 2;
-  const y  = cy - h / 2;
-  const rr = Math.min(r, w / 2, h / 2);
-  path.moveTo(x + rr, y);
-  path.lineTo(x + w - rr, y);
-  path.quadraticCurveTo(x + w, y,     x + w, y + rr);
-  path.lineTo(x + w, y + h - rr);
-  path.quadraticCurveTo(x + w, y + h, x + w - rr, y + h);
-  path.lineTo(x + rr, y + h);
-  path.quadraticCurveTo(x, y + h,     x, y + h - rr);
-  path.lineTo(x, y + rr);
-  path.quadraticCurveTo(x, y,         x + rr, y);
-  return path;
-}
-
-function normalizeShapeUV(geo, w, h) {
-  const uv  = geo.attributes.uv;
-  const pos = geo.attributes.position;
-  for (let i = 0; i < uv.count; i++) {
-    uv.setXY(i, pos.getX(i) / w + 0.5, pos.getY(i) / h + 0.5);
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", initLuminicaLanyard);
+  } else {
+    initLuminicaLanyard();
   }
-  uv.needsUpdate = true;
-}
 
-/* =========================================================================
- * Auto-mount
- * ========================================================================= */
-const mountEl = document.getElementById('lanyard');
-if (mountEl) {
-  createLanyard(mountEl)
-    .then((instance) => { window.lanyard = instance; })
-    .catch((err) => console.error('[lanyard] failed to mount', err));
-}
+  window.LuminicaLanyardApp = LuminicaLanyardApp;
+  window.initLuminicaLanyard = initLuminicaLanyard;
+})();
