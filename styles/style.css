@@ -2175,13 +2175,3 @@ html body[data-theme="day"] .ambient {
   background:#edf2fb !important;
   background-image:none !important;
 }
-
-/* Hanging ID badge (scripts/lanyard.js) — full-bleed canvas over the hero */
-.hero{position:relative;overflow:visible}
-.hero-lanyard{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;overflow:visible}
-.hero-lanyard canvas{display:block;position:absolute;inset:0;width:100%;height:100%;pointer-events:auto;touch-action:pan-y;overflow:visible}
-.hero-lanyard canvas.is-hovering{cursor:grab}
-.hero-lanyard canvas.is-grabbing{cursor:grabbing;touch-action:none}
-/* headline above the badge, pointer falls through to the canvas */
-.hero > :not(.hero-lanyard){position:relative;z-index:1;pointer-events:none}
-.hero-bottom{pointer-events:auto}
