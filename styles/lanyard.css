@@ -1,0 +1,35 @@
+/* styles/lanyard.css */
+#lanyard-wrapper {
+  position: fixed;
+  top: 0;
+  /* Mode Mobile: kanan web, agak geser ke kiri sedikit dari tepi */
+  right: 14%;
+  left: auto;
+  width: 220px;
+  height: 380px;
+  z-index: 999;
+  pointer-events: none; /* Supaya area kosong di sekitar kartu tidak menghalangi klik tombol web */
+}
+
+#lanyard-canvas {
+  width: 100%;
+  height: 100%;
+  display: block;
+  pointer-events: auto; /* Area canvas tetap bisa di-drag & diklik */
+  cursor: grab;
+  touch-action: none;
+}
+
+#lanyard-canvas:active {
+  cursor: grabbing;
+}
+
+/* Mode Desktop: pindah ke sisi KIRI namun besar dan presisi */
+@media (min-width: 1024px) {
+  #lanyard-wrapper {
+    left: 6%;
+    right: auto;
+    width: 360px;
+    height: 620px;
+  }
+}
