@@ -1,7 +1,14 @@
 {
+  "name": "luminica-portfolio",
+  "version": "1.0.0",
   "private": true,
+  "description": "Portfolio site with 3D lanyard card (static Next.js export in /card)",
+  "scripts": {
+    "dev": "node server.js",
+    "start": "node server.js"
+  },
   "engines": {
-    "node": "24.x"
+    "node": ">=18"
   },
   "dependencies": {
     "redis": "^5.8.2"

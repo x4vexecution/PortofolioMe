@@ -500,3 +500,55 @@ html body[data-theme="day"] .global-glass-nav .global-nav-indicator {
 /* fix: resume cards collapsing to 25% width */
 html body main .resume-track{justify-items:stretch!important}
 html body main .resume-track>.resume-columns>.resume-panel,html body main .resume-track>.resume-skill-cards>.resume-panel{width:100%!important;max-width:none!important;justify-self:stretch!important}
+
+
+/* Tubelight-inspired active state: keep the existing vanilla navigation and
+   sliding indicator, add a soft lamp above the selected item. */
+html body .global-glass-nav .global-nav-indicator {
+  overflow: visible !important;
+  background: rgba(112, 145, 255, .075) !important;
+  border: 1px solid rgba(157, 181, 255, .16) !important;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.12), 0 5px 18px rgba(72,105,220,.10) !important;
+  -webkit-backdrop-filter: blur(10px) saturate(150%) !important;
+  backdrop-filter: blur(10px) saturate(150%) !important;
+}
+html body .global-glass-nav .global-nav-indicator::before,
+html body .global-glass-nav .global-nav-indicator::after { display:none !important; }
+html body .global-glass-nav .global-nav-lamp {
+  position:absolute;
+  z-index:2;
+  top:-7px;
+  left:50%;
+  width:30px;
+  height:3px;
+  border-radius:999px 999px 2px 2px;
+  transform:translateX(-50%);
+  background:linear-gradient(90deg,rgba(115,151,255,.82),#a9c1ff 50%,rgba(115,151,255,.82));
+  box-shadow:0 0 7px rgba(132,166,255,.72),0 0 16px rgba(106,139,255,.52),0 0 28px rgba(106,139,255,.24);
+  pointer-events:none;
+}
+html body .global-glass-nav .global-nav-lamp::before,
+html body .global-glass-nav .global-nav-lamp::after {
+  content:"";
+  position:absolute;
+  top:-5px;
+  height:13px;
+  border-radius:50%;
+  background:rgba(116,151,255,.24);
+  filter:blur(7px);
+  pointer-events:none;
+}
+html body .global-glass-nav .global-nav-lamp::before { left:-8px; width:46px; }
+html body .global-glass-nav .global-nav-lamp::after { left:3px; width:24px; top:-3px; background:rgba(159,185,255,.35); filter:blur(5px); }
+html body .global-glass-nav .global-nav-item { transition:color .28s ease, opacity .28s ease !important; }
+html body .global-glass-nav .global-nav-item.active { color:var(--nav-active-color, #c8d7ff) !important; }
+html body[data-theme="day"] .global-glass-nav .global-nav-item.active { color:#4569d6 !important; }
+@media (max-width:760px) {
+  html body .global-glass-nav .mobile-nav-links .global-nav-item span { display:none !important; }
+  html body .global-glass-nav .mobile-nav-links .global-nav-item { gap:0 !important; }
+  html body .global-glass-nav .global-nav-indicator { top:0 !important; }
+  html body .global-glass-nav .global-nav-lamp { top:-6px; width:25px; height:2px; }
+}
+@media (prefers-reduced-motion:reduce) {
+  html body .global-glass-nav .global-nav-item { transition:none !important; }
+}
